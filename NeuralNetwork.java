@@ -29,12 +29,12 @@ public class NeuralNetwork implements Serializable {
 		- softmax
  	*/
 	protected String[] activations;
-	public int numLayers
+	public int numLayers;
 	//gradient clipping threshold
 	public double clipThreshold = 1;
 	
-	protected List<double[][]> biasGradient;
-	protected List<double[][][]> weightGradient;
+	protected double[][] biasGradient;
+	protected double[][][] weightGradient;
 
 	//takes in int[] for number of neurons in each layer and string[] for activations of each layer
 	public NeuralNetwork(int[] topology, String[] active) {
@@ -44,9 +44,7 @@ public class NeuralNetwork implements Serializable {
 		neurons = new double[numLayers][maxLayerSize];
 		neuronsRaw = new double[numLayers][maxLayerSize];
 		biases = new double[numLayers][maxLayerSize];
-		biasGradient = new ArrayList<double[][]>();
 		weights = new double[numLayers][maxLayerSize][maxLayerSize];
-		weightGradient = new ArrayList<double[][][]>();
 		activations = active.clone();
 	}
 
@@ -451,7 +449,7 @@ public class NeuralNetwork implements Serializable {
 		return 1;
 	}
 
-	double[] Backpropagate(double c, double[] predicted, double[] expected, int layer, int bGrad, int wGrad, String lossFunction) {
+	double[] Backpropagate(double c, double[] predicted, double[] expected, int layer, String lossFunction) {
 		double[] neuronGradients = new double[neuronsPerLayer[layer]];
 
 		//base case
@@ -462,14 +460,14 @@ public class NeuralNetwork implements Serializable {
 			}
 			//set weights/biases
 			for(int i = 0; i < neuronsPerLayer[layer]; i++) {
-				biasGradient.get(bGrad)[layer][i] = 1 * neuronGradients[i];
-				if(Double.isNaN(biasGradient.get(bGrad)[layer][i])) {
+				biasGradient[layer][i] = 1 * neuronGradients[i];
+				if(Double.isNaN(biasGradient[layer][i])) {
 					System.out.println("Nan error in bias of first layer. try reducing the learning rate");
 					throw new ArithmeticException("NaN error");
 				}
 				for(int j = 0; j < neuronsPerLayer[layer-1]; j++) {
-					weightGradient.get(wGrad)[layer][i][j] = neuronGradients[i] * neurons[layer-1][j];
-					if(Double.isNaN(weightGradient.get(wGrad)[layer][i][j])) {
+					weightGradient[layer][i][j] = neuronGradients[i] * neurons[layer-1][j];
+					if(Double.isNaN(weightGradient[layer][i][j])) {
 						System.out.println("Nan error in weight of first layer. try reducing the learning rate");
 						throw new ArithmeticException("NaN error");
 					}
@@ -479,7 +477,7 @@ public class NeuralNetwork implements Serializable {
 		}
 		
 		//recursive case
-		double[] nextLayerBackpropagate = Backpropagate(c, predicted, expected, layer+1, bGrad, wGrad, lossFunction);
+		double[] nextLayerBackpropagate = Backpropagate(c, predicted, expected, layer+1, lossFunction);
 		double nextLayerSum = 0;
 		double[] nextLayerWeightedSum = new double[neuronsPerLayer[layer]];
 		for(int i = 0; i < neuronsPerLayer[layer+1]; i++) {
@@ -493,14 +491,14 @@ public class NeuralNetwork implements Serializable {
 		//update gradients
 		for(int i = 0; i < neuronsPerLayer[layer]; i++) {
 			neuronGradients[i] = activate_der(neuronsRaw[layer][i], layer, i) * nextLayerWeightedSum[i];
-			biasGradient.get(bGrad)[layer][i] = 1 * nextLayerSum;
-			if(Double.isNaN(biasGradient.get(bGrad)[layer][i])) {
+			biasGradient[layer][i] = 1 * nextLayerSum;
+			if(Double.isNaN(biasGradient[layer][i])) {
 				System.out.println("Nan error in bias. try reducing the learning rate");
 				throw new ArithmeticException("NaN error");
 			}
 			for(int j = 0; j < neuronsPerLayer[layer-1]; j++) {
-				weightGradient.get(wGrad)[layer][i][j] = neuronGradients[i] * neurons[layer-1][j];
-				if(Double.isNaN(weightGradient.get(wGrad)[layer][i][j])) {
+				weightGradient[layer][i][j] = neuronGradients[i] * neurons[layer-1][j];
+				if(Double.isNaN(weightGradient[layer][i][j])) {
 					System.out.println("Nan error in weight. try reducing the learning rate");
 					throw new ArithmeticException("NaN error");
 				}
@@ -523,8 +521,6 @@ public class NeuralNetwork implements Serializable {
 			//do exponential learning rate decay
 			lr = learningRate * Math.pow(1 - decay, e);
 			
-			biasGradient = new ArrayList<double[][]>();
-			weightGradient = new ArrayList<double[][][]>();
 			//choose random case
 
 			if(batchSize == -1) {
@@ -543,37 +539,41 @@ public class NeuralNetwork implements Serializable {
 				avgCost += c[i];
 			}
 			avgCost /= (double)batchSize;
-			for(int i = 0; i < batchSize; i++) {
+
+			double[][] avgBiasGradient = new double[numLayers][biases[0].length];
+			double[][][] avgWeightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
+			for(int a = 0; a < batchSize; a++) {
 				caseInd = r.nextInt(inputs.length);
 				
 				double[] predicted = Evaluate(inputs[caseInd]);
-				biasGradient.add(new double[numLayers][neurons[0].length]);
-				weightGradient.add(new double[numLayers][weights[0].length][weights[0][0].length]);
-				Backpropagate(avgCost, predicted, outputs[caseInd], 1, biasGradient.size()-1, weightGradient.size()-1, lossFunction);
+				biasGradient = new double[numLayers][neurons[0].length];
+				weightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
+				Backpropagate(avgCost, predicted, outputs[caseInd], 1, lossFunction);
+				//sum gradients for average
+				for(int i = 0; i < numLayers; i++)  {
+					for(int j = 0; j < biases[0].length; j++) {
+						avgBiasGradient[i][j] += biasGradient[i][j];
+					}
+				}
+				for(int i = 0; i < numLayers; i++)  {
+					for(int j = 0; j < weights[0].length; j++) {
+						for(int k = 0; k < weights[0][0].length; k++) {
+							avgWeightGradient[i][j][k] += weightGradient[i][j][k];
+						}
+					}
+				}
 			}
 
 			//average bias and weight gradients element wise
-			double[][] avgBiasGradient = new double[numLayers][biases[0].length];
-			double[][][] avgWeightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
 			for(int i = 0; i < numLayers; i++)  {
 				for(int j = 0; j < biases[0].length; j++) {
-					double avg = 0;
-					for(double[][] bgrad : biasGradient) {
-						avg += bgrad[i][j];
-					}
-					avg /= biasGradient.size();
-					avgBiasGradient[i][j] = avg;
+					avgBiasGradient[i][j] /= batchSize;
 				}
 			}
 			for(int i = 0; i < numLayers; i++)  {
 				for(int j = 0; j < weights[0].length; j++) {
 					for(int k = 0; k < weights[0][0].length; k++) {
-						double avg = 0;
-						for(double[][][] wgrad : weightGradient) {
-							avg += wgrad[i][j][k];
-						}
-						avg /= weightGradient.size();
-						avgWeightGradient[i][j][k] = avg;
+						avgWeightGradient[i][j][k] /= batchSize;
 					}
 				}
 			}
