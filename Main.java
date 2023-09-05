@@ -400,10 +400,40 @@ class Main {
 					mnistOutputs = null;
 					mnistInitialized = false;
 					SIZE = 0;
-					initMnist(Integer.parseInt(s[1]), "data/train-images.idx3-ubyte", "data/train-labels.idx1-ubyte");
+					initMnist(Math.min(Integer.parseInt(s[1]), 60000), "data/train-images.idx3-ubyte", "data/train-labels.idx1-ubyte");
+				} else if(s[0].equals("magnitude")) {
+					double avgBias = 0, minBias = Double.MAX_VALUE, maxBias = Double.MIN_VALUE;	
+					double[][] biases = nn.GetBiases();
+					int numBiases = 0;
+					int[] topology = nn.GetTopology();
+					for(int i = 0; i < biases.length; i++) {
+						for(int j = 0; j < topology[i]; j++) {
+							avgBias += biases[i][j];
+							minBias = Math.min(minBias, biases[i][j]);
+							maxBias = Math.max(maxBias, biases[i][j]);
+							numBiases++;
+						}
+					}
+					avgBias /= numBiases;
+					double avgWeight = 0, minWeight = Double.MAX_VALUE, maxWeight = Double.MIN_VALUE;	
+					double[][][] weights = nn.GetWeights();
+					int numWeights = 0;
+					for(int i = 1; i < weights.length; i++) {
+						for(int j = 0; j < topology[i]; j++) {
+							for(int k = 0; k < topology[i-1]; k++) {
+								avgWeight += weights[i][j][k];
+								minWeight = Math.min(minWeight, weights[i][j][k]);
+								maxWeight = Math.max(maxWeight, weights[i][j][k]);
+								numWeights++;
+							}
+						}
+					}
+					avgWeight /= numWeights;
+					Output("min bias: " + minBias + "\nmax bias: " + maxBias + "\naverage bias: " + avgBias);
+					Output("min weight: " + minWeight + "\nmax weight: " + maxWeight + "average weight: " + avgWeight);
 				} else if(s[0].equals("help")) {
 					if(s.length == 1) {
-						Output("type help [command name] to get detailed usage info \ncommands: \n    - save\n    - load\n    - create\n    - init\n    - reset\n    - info\n    - evaluate\n    - exit\n    - modify\n    - mutate\n    - train\n    - cost\n    - help");
+						Output("type help [command name] to get detailed usage info \ncommands: \n    - save\n    - load\n    - create\n    - init\n    - reset\n    - info\n    - evaluate\n    - exit\n    - modify\n    - mutate\n    - train\n    - cost\n    - mnist\n    - magnitude\n    - help");
 					} else {
 						if(s[1].equals("save")) {
 							Output("syntax: save [path]\nsaves the current neural network to the specified file path");
@@ -416,9 +446,9 @@ class Main {
 						} else if(s[1].equals("reset")) {
 							Output("syntax: reset\nresets current neural network to uninitialized");
 						} else if(s[1].equals("info")) {
-							Output("syntax: info\nprints information about the current neural network");
+							Output("syntax: info [optional 'topology/activations/weights/biases']\nprints specific or general information about the current neural network.");
 						} else if(s[1].equals("evaluate")) {
-							Output("syntax: evaluate\nevaluates the neural network for a specified input");
+							Output("syntax: evaluate [optional 'mnist'] [optional mnist case #]\nevaluates the neural network for a specified input. If mnist is specified, then it will evaluate on the specified case #");
 						} else if(s[1].equals("exit")) {
 							Output("syntax: exit\nexits the program");
 						} else if(s[1].equals("modify")) {
@@ -426,13 +456,15 @@ class Main {
 						} else if(s[1].equals("mutate")) {
 							Output("syntax: mutate [mutation chance decimal] [variation]\nmutates neural network to simulate evolution. useful for genetic algorithms");
 						} else if(s[1].equals("train")) {
-							Output("syntax: train [training data file path] [epochs] [learning rate] [loss function] [optional: batch size]\ntrains neural network on specified training data based on specified hyperparameters. loss function choices are\n    - mse\n    - categorical_crossentropy\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
+							Output("syntax: train [training data file path/'mnist'] [epochs] [learning rate] [loss function] [optional: batch size] [optional: decay rate]\ntrains neural network on specified training data or mnist dataset based on specified hyperparameters. loss function choices are\n    - mse\n    - categorical_crossentropy\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("cost")) {
-							Output("syntax: cost [test data file path] [loss function]\nreturns the average cost of the neural network for the specified dataset. loss function choices are\n    - mse\n    - categorical_crossentropy\ntest data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
+							Output("syntax: cost [test data file path] [loss function] or cost mnist\nreturns the average cost of the neural network for the specified dataset or the accuracy percentage for the mnist dataset. loss function choices are\n    - mse\n    - categorical_crossentropy\ntest data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("help")) {
 							Output("syntax: help [optional: command name]\nhelp command");
 						} else if(s[1].equals("mnist")) {
-							Output("syntax: mnist\ninitializes the mnist dataset");
+							Output("syntax: mnist [# of cases]\ninitializes the mnist dataset with the specified # of cases. up to 60,000");
+						} else if(s[1].equals("magnitude")) {
+							Output("syntax: magnitude\ndisplays the magnitude of the network's parameters. Shows min/max/average weights and biases");
 						} else {
 							//unknown command
 							Output(s[1] + ": command not found");
@@ -442,8 +474,13 @@ class Main {
 					//invalid command
 					Output(s[0] + ": command not found");
 				}
+			} catch(NullPointerException e) {
+				Output("ERROR: neural network has not been initialized");
+				continue;
+			} catch(IndexOutOfBoundsException e) {
+				Output("ERROR: input is out of allowed range");
 			} catch(Exception e) {
-				Output("invalid input");
+				Output("ERROR: invalid input");
 				e.printStackTrace();
 				continue;
 			}
@@ -554,6 +591,8 @@ class Main {
 
 	static void Clear() {
 		Output("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+		Output("Neural Network Console (type 'help' or 'exit' if stuck)");
+		Output("=-=-=-=-=-=-=-=-=-=-=-=-=-=");
 	}
 
 	static void Output(String msg) {
