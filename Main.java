@@ -408,27 +408,31 @@ class Main {
 					int[] topology = nn.GetTopology();
 					for(int i = 0; i < biases.length; i++) {
 						for(int j = 0; j < topology[i]; j++) {
-							avgBias += biases[i][j];
+							avgBias += biases[i][j] / (double)numBiases;
 							minBias = Math.min(minBias, biases[i][j]);
 							maxBias = Math.max(maxBias, biases[i][j]);
 							numBiases++;
 						}
 					}
-					avgBias /= numBiases;
 					double avgWeight = 0, minWeight = Double.MAX_VALUE, maxWeight = Double.MIN_VALUE;	
 					double[][][] weights = nn.GetWeights();
 					int numWeights = 0;
 					for(int i = 1; i < weights.length; i++) {
 						for(int j = 0; j < topology[i]; j++) {
 							for(int k = 0; k < topology[i-1]; k++) {
-								avgWeight += weights[i][j][k];
-								minWeight = Math.min(minWeight, weights[i][j][k]);
-								maxWeight = Math.max(maxWeight, weights[i][j][k]);
 								numWeights++;
 							}
 						}
 					}
-					avgWeight /= numWeights;
+					for(int i = 1; i < weights.length; i++) {
+						for(int j = 0; j < topology[i]; j++) {
+							for(int k = 0; k < topology[i-1]; k++) {
+								avgWeight += weights[i][j][k] / (double)numWeights;
+								minWeight = Math.min(minWeight, weights[i][j][k]);
+								maxWeight = Math.max(maxWeight, weights[i][j][k]);
+							}
+						}
+					}
 					Output("min bias: " + minBias + "\nmax bias: " + maxBias + "\naverage bias: " + avgBias);
 					Output("min weight: " + minWeight + "\nmax weight: " + maxWeight + "average weight: " + avgWeight);
 				} else if(s[0].equals("help")) {

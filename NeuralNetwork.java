@@ -532,13 +532,12 @@ public class NeuralNetwork implements Serializable {
 				caseInd = r.nextInt(inputs.length);
 				
 				double[] predicted = Evaluate(inputs[caseInd]);
-				c[i] = Cost(predicted, outputs[caseInd], lossFunction);
+				c[i] = Cost(predicted, outputs[caseInd], lossFunction) / (double)batchSize;
 			}
 			double avgCost = 0;
 			for(int i = 0; i < batchSize; i++) {
 				avgCost += c[i];
 			}
-			avgCost /= (double)batchSize;
 
 			double[][] avgBiasGradient = new double[numLayers][biases[0].length];
 			double[][][] avgWeightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
@@ -552,28 +551,14 @@ public class NeuralNetwork implements Serializable {
 				//sum gradients for average
 				for(int i = 0; i < numLayers; i++)  {
 					for(int j = 0; j < biases[0].length; j++) {
-						avgBiasGradient[i][j] += biasGradient[i][j];
+						avgBiasGradient[i][j] += biasGradient[i][j] / (double)batchSize;
 					}
 				}
 				for(int i = 0; i < numLayers; i++)  {
 					for(int j = 0; j < weights[0].length; j++) {
 						for(int k = 0; k < weights[0][0].length; k++) {
-							avgWeightGradient[i][j][k] += weightGradient[i][j][k];
+							avgWeightGradient[i][j][k] += weightGradient[i][j][k] / (double)batchSize;
 						}
-					}
-				}
-			}
-
-			//average bias and weight gradients element wise
-			for(int i = 0; i < numLayers; i++)  {
-				for(int j = 0; j < biases[0].length; j++) {
-					avgBiasGradient[i][j] /= batchSize;
-				}
-			}
-			for(int i = 0; i < numLayers; i++)  {
-				for(int j = 0; j < weights[0].length; j++) {
-					for(int k = 0; k < weights[0][0].length; k++) {
-						avgWeightGradient[i][j][k] /= batchSize;
 					}
 				}
 			}
