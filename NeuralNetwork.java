@@ -528,11 +528,12 @@ public class NeuralNetwork implements Serializable {
 			}
 			double[] c = new double[batchSize];
 			int caseInd = 0;
+			final double weightedAvg = 1 / (double) batchSize;
 			for(int i = 0; i < batchSize; i++) {
 				caseInd = r.nextInt(inputs.length);
 				
 				double[] predicted = Evaluate(inputs[caseInd]);
-				c[i] = Cost(predicted, outputs[caseInd], lossFunction) / (double)batchSize;
+				c[i] = Cost(predicted, outputs[caseInd], lossFunction) * weightedAvg;
 			}
 			double avgCost = 0;
 			for(int i = 0; i < batchSize; i++) {
@@ -551,13 +552,13 @@ public class NeuralNetwork implements Serializable {
 				//sum gradients for average
 				for(int i = 0; i < numLayers; i++)  {
 					for(int j = 0; j < biases[0].length; j++) {
-						avgBiasGradient[i][j] += biasGradient[i][j] / (double)batchSize;
+						avgBiasGradient[i][j] += biasGradient[i][j] * weightedAvg;
 					}
 				}
 				for(int i = 0; i < numLayers; i++)  {
 					for(int j = 0; j < weights[0].length; j++) {
 						for(int k = 0; k < weights[0][0].length; k++) {
-							avgWeightGradient[i][j][k] += weightGradient[i][j][k] / (double)batchSize;
+							avgWeightGradient[i][j][k] += weightGradient[i][j][k] * weightedAvg;
 						}
 					}
 				}

@@ -373,14 +373,14 @@ class Main {
 						}
 						System.out.println();
 						double avgCost = 0;
+						final double weightedAvg = 1/(double)numCases;
 						for(int i = 0; i < numCases; i++) {
 							double c = nn.Cost(nn.Evaluate(inputs[i]), outputs[i], s[2]);
 							if(Double.isNaN(c)) {
 								Output("nan error at input #" + i);
 							}
-							avgCost += c;
+							avgCost += c * weightedAvg;
 						}
-						avgCost /= numCases;
 						System.out.println("cost: " + avgCost);
 					} catch(FileNotFoundException e) {
 						Output("file not found");
@@ -408,10 +408,15 @@ class Main {
 					int[] topology = nn.GetTopology();
 					for(int i = 0; i < biases.length; i++) {
 						for(int j = 0; j < topology[i]; j++) {
-							avgBias += biases[i][j] / (double)numBiases;
+							numBiases++;
+						}
+					}
+					final double biasWeightedAvg = 1/(double)numBiases;
+					for(int i = 0; i < biases.length; i++) {
+						for(int j = 0; j < topology[i]; j++) {
+							avgBias += biases[i][j] * biasWeightedAvg;
 							minBias = Math.min(minBias, biases[i][j]);
 							maxBias = Math.max(maxBias, biases[i][j]);
-							numBiases++;
 						}
 					}
 					double avgWeight = 0, minWeight = Double.MAX_VALUE, maxWeight = Double.MIN_VALUE;	
@@ -424,10 +429,11 @@ class Main {
 							}
 						}
 					}
+					final double weightWeightedAvg = 1/(double)numWeights;
 					for(int i = 1; i < weights.length; i++) {
 						for(int j = 0; j < topology[i]; j++) {
 							for(int k = 0; k < topology[i-1]; k++) {
-								avgWeight += weights[i][j][k] / (double)numWeights;
+								avgWeight += weights[i][j][k] * weightWeightedAvg;
 								minWeight = Math.min(minWeight, weights[i][j][k]);
 								maxWeight = Math.max(maxWeight, weights[i][j][k]);
 							}
