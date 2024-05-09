@@ -326,10 +326,10 @@ class Main {
 						}
 						//find accuracy of mnist network
 						int numCorrect = 0;
-						int numCases = Math.min(mnistImages.length, 1000);
-						Random r = new Random();
+						int numCases = mnistImages.length;
+						//Random r = new Random();
 						for(int i = 0; i < numCases; i++) {
-							int index = r.nextInt(numCases);
+							int index = i;
 
 							double[] output = nn.Evaluate(mnistImages[index]);
 							int prediction = indexOf(output, max(output));
