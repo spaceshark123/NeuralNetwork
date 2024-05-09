@@ -217,7 +217,7 @@ class Main {
 					}
 				} else if(s[0].equals("train")) {
 					if(s.length < 5) {
-						Output("please specify the following:\n    - path to the training set\n    - number of epochs\n    - learning rate\n    - loss function\n    - batch size (optional)\n    - decay rate (optional)");
+						Output("please specify the following:\n    - path to the training set\n    - number of epochs\n    - learning rate\n    - loss function\n    - batch size (optional)\n    - decay rate (optional)\n    - clip threshold (optional)");
 						continue;
 					}
 					//trainset file must be formatted:
@@ -299,6 +299,11 @@ class Main {
 							if(s.length >= 7) {
 								decay = Double.parseDouble(s[6]);
 							}
+						    double clipThreshold = 1;
+							if(s.length >= 8) {
+								clipThreshold = Double.parseDouble(s[7]);
+							}
+							nn.clipThreshold = clipThreshold;
 							nn.Train(inputs, outputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, s[4], decay);
 							System.out.println();
 						}
@@ -466,7 +471,7 @@ class Main {
 						} else if(s[1].equals("mutate")) {
 							Output("syntax: mutate [mutation chance decimal] [variation]\nmutates neural network to simulate evolution. useful for genetic algorithms");
 						} else if(s[1].equals("train")) {
-							Output("syntax: train [training data file path/'mnist'] [epochs] [learning rate] [loss function] [optional: batch size] [optional: decay rate]\ntrains neural network on specified training data or mnist dataset based on specified hyperparameters. loss function choices are\n    - mse\n    - categorical_crossentropy\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
+							Output("syntax: train [training data file path/'mnist'] [epochs] [learning rate] [loss function] [optional: batch size] [optional: decay rate] [optional: clip threshold]\ntrains neural network on specified training data or mnist dataset based on specified hyperparameters. loss function choices are\n    - mse\n    - categorical_crossentropy\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("cost")) {
 							Output("syntax: cost [test data file path] [loss function] or cost mnist\nreturns the average cost of the neural network for the specified dataset or the accuracy percentage for the mnist dataset. loss function choices are\n    - mse\n    - categorical_crossentropy\ntest data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("help")) {
