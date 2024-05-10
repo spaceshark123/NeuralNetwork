@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.Collections;
 
 public class NeuralNetwork implements Serializable {
 	private static final long serialVersionUID = 1L;
@@ -32,6 +33,8 @@ public class NeuralNetwork implements Serializable {
 	public int numLayers;
 	//gradient clipping threshold
 	public double clipThreshold = 1;
+	//whether or not to display accuracy while training (for classification models)
+	public boolean displayAccuracy = false;
 	
 	protected double[][] biasGradient;
 	protected double[][][] weightGradient;
@@ -517,6 +520,14 @@ public class NeuralNetwork implements Serializable {
 	public void Train(double[][] inputs, double[][] outputs, int epochs, double learningRate, int batchSize, String lossFunction, double decay) {
 		Random r = new Random();
 		double lr = learningRate;
+		//list of indices, will be randomized in each epoch
+		List<Integer> indices = new ArrayList<Integer>(inputs.length);
+		for(int i = 0; i < inputs.length; i++) {
+			indices.add(i);
+		}
+		Collections.shuffle(indices);
+		//current index
+		int currentInd = 0;
 		for(int e = 0; e < epochs; e++) {
 			//do exponential learning rate decay
 			lr = learningRate * Math.pow(1 - decay, e);
@@ -527,12 +538,28 @@ public class NeuralNetwork implements Serializable {
 				batchSize = inputs.length;
 			}
 			double[] c = new double[batchSize];
+			double numCorrect = 0;
 			int caseInd = 0;
+			List<Integer> batchInds = new ArrayList<Integer>(batchSize);
 			final double weightedAvg = 1 / (double) batchSize;
 			for(int i = 0; i < batchSize; i++) {
-				caseInd = r.nextInt(inputs.length);
+				if(currentInd >= indices.size()) {
+					currentInd = 0;
+					//reshuffle
+					Collections.shuffle(indices);
+				}
+				caseInd = indices.get(currentInd);
+				batchInds.add(caseInd);
+				currentInd++;
 				
 				double[] predicted = Evaluate(inputs[caseInd]);
+				if(displayAccuracy) {
+					int prediction = indexOf(predicted, max(predicted));
+					int actual = indexOf(outputs[caseInd], max(outputs[caseInd]));
+					if(prediction == actual) {
+						numCorrect++;
+					}
+				}
 				c[i] = Cost(predicted, outputs[caseInd], lossFunction) * weightedAvg;
 			}
 			double avgCost = 0;
@@ -543,7 +570,7 @@ public class NeuralNetwork implements Serializable {
 			double[][] avgBiasGradient = new double[numLayers][biases[0].length];
 			double[][][] avgWeightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
 			for(int a = 0; a < batchSize; a++) {
-				caseInd = r.nextInt(inputs.length);
+				caseInd = batchInds.get(a);
 				
 				double[] predicted = Evaluate(inputs[caseInd]);
 				biasGradient = new double[numLayers][neurons[0].length];
@@ -579,19 +606,47 @@ public class NeuralNetwork implements Serializable {
 					}
 				}
 			}
-			progressBar(30, "Training", e+1, epochs);
+			if(displayAccuracy) {
+				double accuracy = 100*((double) numCorrect * weightedAvg);
+				//round to one decimal
+				accuracy = Math.round(accuracy*10.0) / 10.0;
+				progressBar(30, "Training", e+1, epochs, "accuracy: "+accuracy+"%");
+			} else {
+				progressBar(30, "Training", e+1, epochs, "");
+			}
 		}
 	}
 
-	void progressBar(int width, String title, int current, int total) {
+	void progressBar(int width, String title, int current, int total, String subtitle) {
 		String filled = "█";
 		String unfilled = "░";
 		double fill = (double) current / total;
 		if(fill >= 0 && fill <= 1) {
 			//set progress bar
 			int fillAmount = (int)Math.ceil(fill * width);
-			String bar = title + ": " + filled.repeat(fillAmount) + unfilled.repeat(width - fillAmount) + " " + current + "/" + total + " " + "\r";
+			String bar = title + ": " + filled.repeat(fillAmount) + unfilled.repeat(width - fillAmount) + " " + current + "/" + total + " " + subtitle + " " + "\r";
 			System.out.print(bar);
 		 }
 	} 
+
+	double max(double[] arr) {
+		double m = -1;
+		for(double i : arr) {
+			if(i > m) {
+				m = i;
+			}
+		}
+		return m;
+	}
+
+	int indexOf(double[] arr, double v) {
+		int index = -1;
+		for(int i = 0; i < arr.length; i++) {
+			if(arr[i] == v) {
+				index = i;
+				return index;
+			}
+		}
+		return index;
+	}
 }

@@ -248,6 +248,8 @@ class Main {
 								if(s.length >= 7) {
 									decay = Double.parseDouble(s[6]);
 								}
+								//since mnist is a classification model, display accuracy as we go
+								nn.displayAccuracy = true;
 								nn.Train(mnistImages, mnistOutputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, s[4], decay);
 								System.out.println();
 							}
@@ -304,6 +306,7 @@ class Main {
 								clipThreshold = Double.parseDouble(s[7]);
 							}
 							nn.clipThreshold = clipThreshold;
+							nn.displayAccuracy = false;
 							nn.Train(inputs, outputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, s[4], decay);
 							System.out.println();
 						}
@@ -337,7 +340,7 @@ class Main {
 							if(prediction == mnistLabels[index]) {
 								numCorrect++;
 							}
-							progressBar(30, "calculating: ", i+1, numCases);
+							progressBar(30, "calculating", i+1, numCases);
 						}
 						System.out.println();
 						System.out.println("accuracy: " + 100*((double) numCorrect / numCases) + "%");
