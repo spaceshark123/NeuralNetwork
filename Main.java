@@ -248,6 +248,11 @@ class Main {
 								if(s.length >= 7) {
 									decay = Double.parseDouble(s[6]);
 								}
+								double clipThreshold = 1;
+								if(s.length >= 8) {
+									clipThreshold = Double.parseDouble(s[7]);
+								}
+								nn.clipThreshold = clipThreshold;
 								//since mnist is a classification model, display accuracy as we go
 								nn.displayAccuracy = true;
 								nn.Train(mnistImages, mnistOutputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, s[4], decay);
@@ -315,6 +320,7 @@ class Main {
 						continue;
 					} catch(Exception e) {
 						Output("file parsing error");
+						e.printStackTrace(); 
 						continue;
 					}
 				} else if(s[0].equals("cost")) {
@@ -330,6 +336,8 @@ class Main {
 						//find accuracy of mnist network
 						int numCorrect = 0;
 						int numCases = mnistImages.length;
+						final double weightedAvg = 1.0 / (double)numCases;
+						double avgCost = 0;
 						//Random r = new Random();
 						for(int i = 0; i < numCases; i++) {
 							int index = i;
@@ -340,10 +348,11 @@ class Main {
 							if(prediction == mnistLabels[index]) {
 								numCorrect++;
 							}
+							avgCost += nn.Cost(output, mnistOutputs[index], "categorical_crossentropy") * weightedAvg;
 							progressBar(30, "calculating", i+1, numCases);
 						}
 						System.out.println();
-						System.out.println("accuracy: " + 100*((double) numCorrect / numCases) + "%");
+						System.out.println("accuracy: " + 100*((double) numCorrect / numCases) + "%, cost: " + avgCost);
 						continue;
 					}
 					try {
@@ -383,10 +392,18 @@ class Main {
 						double avgCost = 0;
 						final double weightedAvg = 1/(double)numCases;
 						for(int i = 0; i < numCases; i++) {
-							double c = nn.Cost(nn.Evaluate(inputs[i]), outputs[i], s[2]);
+							double[] output = nn.Evaluate(inputs[i]);
+							double c = nn.Cost(output, outputs[i], s[2]);
 							if(Double.isNaN(c)) {
 								Output("nan error at input #" + i);
 							}
+							// Output("inputs: ");
+							// printArr(inputs[i]);
+							// Output("outputs: ");
+							// printArr(output);
+							// Output("expected: ");
+							// printArr(outputs[i]);
+							// Output("case " + i + " cost: " + c + " with loss function " + s[2]);
 							avgCost += c * weightedAvg;
 						}
 						System.out.println("cost: " + avgCost);

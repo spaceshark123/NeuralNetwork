@@ -147,11 +147,17 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	double softmax_activation(double raw, double[] neuronValues) {
-    	double total = 0;
-		for(double i : neuronValues) {
-			total += Math.exp(i);
+		//this is a slightly modified version of softmax meant to normalize inputs by subtracting the max
+		//this way, there are less nan overflow errors with the exponentiation
+    	double maxVal = max(neuronValues);
+
+		// Compute the normalization factor (sum of exponentials)
+		double total = 0;
+		for (double value : neuronValues) {
+			total += Math.exp(value - maxVal);
 		}
-		return Math.exp(raw) / Math.max(total, 1.0e-15);
+		// Compute the softmax activation
+		return Math.exp(raw - maxVal) / Math.max(total, 1.0e-15);
 	}
 
 	double softmax_der(double[] neuronValues, int index) {
@@ -165,23 +171,23 @@ public class NeuralNetwork implements Serializable {
 
         // Calculate the softmax values
         for (double i : neuronValues) {
-			if(Double.isNaN(Math.exp(i))) {
+			if(Double.isNaN(Math.exp(i-max(neuronValues)))) {
 				System.out.println("NaN error in softmax activation der: exp of neuron value is NaN");
 			}
-            total += Math.exp(i);
+            total += Math.exp(i-max(neuronValues));
         }
 		if(Double.isNaN(total)) {
 			System.out.println("NaN error in softmax activation der: total exp value is NaN");
 		}
         for (int i = 0; i < neuronValues.length; i++) {
-			if(Double.isNaN(Math.exp(neuronValues[i]) / Math.max(total, 1.0e-15))) {
+			if(Double.isNaN(Math.exp(neuronValues[i]-max(neuronValues)) / Math.max(total, 1.0e-15))) {
 				System.out.println("NaN error in softmax activation der: softmax value is NaN");
 				System.out.println("neuron value: " + neuronValues[i] + " total: " + total);
 			}
 			if(Double.isNaN(Math.max(total, 1.0e-15))) {
 				System.out.println("NaN error in softmax activation der: max of total exp value is NaN");
 			}
-            softmaxValues[i] = Math.exp(neuronValues[i]) / Math.max(total, 1.0e-15);
+            softmaxValues[i] = Math.exp(neuronValues[i]-max(neuronValues)) / Math.max(total, 1.0e-15);
         }
 
         // Calculate the derivative using the diagonal elements of the Jacobian matrix
@@ -426,7 +432,10 @@ public class NeuralNetwork implements Serializable {
 		}
 		if(lossFunction.equals("mse")) {
 			for(int i = 0; i < output.length; i++) {
-				cost += 0.5 * Math.pow(expected[i] - output[i], 2);
+				//System.out.println("neuron " + i + " output: " + output[i] + " expected: " + expected[i]);
+				double neuronCost = 0.5 * Math.pow(expected[i] - output[i], 2);
+				//System.out.println("neuron " + i + " + cost is " + neuronCost);
+				cost += neuronCost;
 			}
 		} else if(lossFunction.equals("categorical_crossentropy")) {
 			for(int i = 0; i < output.length; i++) {
@@ -518,41 +527,46 @@ public class NeuralNetwork implements Serializable {
 
 	//uses SGD (stochastic gradient descent)
 	public void Train(double[][] inputs, double[][] outputs, int epochs, double learningRate, int batchSize, String lossFunction, double decay) {
-		Random r = new Random();
 		double lr = learningRate;
-		//list of indices, will be randomized in each epoch
+		//list of indices for data points, will be randomized in each epoch
 		List<Integer> indices = new ArrayList<Integer>(inputs.length);
 		for(int i = 0; i < inputs.length; i++) {
 			indices.add(i);
 		}
+		//initial shuffle
 		Collections.shuffle(indices);
-		//current index
+		//current index of data point
 		int currentInd = 0;
+		//precompute weighted average (multiply each element by this to average out all data points in batch)
+		final double weightedAvg = 1.0 / (double) batchSize;
+		//System.out.println("clip threshold: " + clipThreshold);
 		for(int e = 0; e < epochs; e++) {
 			//do exponential learning rate decay
 			lr = learningRate * Math.pow(1 - decay, e);
 			
 			//choose random case
-
 			if(batchSize == -1) {
 				batchSize = inputs.length;
 			}
-			double[] c = new double[batchSize];
 			double numCorrect = 0;
 			int caseInd = 0;
-			List<Integer> batchInds = new ArrayList<Integer>(batchSize);
-			final double weightedAvg = 1 / (double) batchSize;
-			for(int i = 0; i < batchSize; i++) {
+			//System.out.println("weighted avg " + weightedAvg);
+			double[][] avgBiasGradient = new double[numLayers][biases[0].length];
+			double[][][] avgWeightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
+			for(int a = 0; a < batchSize; a++) {
+				//find current random data point
 				if(currentInd >= indices.size()) {
 					currentInd = 0;
-					//reshuffle
+					//finished epoch, start new epoch by reshuffling
 					Collections.shuffle(indices);
 				}
 				caseInd = indices.get(currentInd);
-				batchInds.add(caseInd);
 				currentInd++;
 				
+				//calculate predicted output
 				double[] predicted = Evaluate(inputs[caseInd]);
+
+				//if this is a classification network, count the number correct
 				if(displayAccuracy) {
 					int prediction = indexOf(predicted, max(predicted));
 					int actual = indexOf(outputs[caseInd], max(outputs[caseInd]));
@@ -560,23 +574,12 @@ public class NeuralNetwork implements Serializable {
 						numCorrect++;
 					}
 				}
-				c[i] = Cost(predicted, outputs[caseInd], lossFunction) * weightedAvg;
-			}
-			double avgCost = 0;
-			for(int i = 0; i < batchSize; i++) {
-				avgCost += c[i];
-			}
 
-			double[][] avgBiasGradient = new double[numLayers][biases[0].length];
-			double[][][] avgWeightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
-			for(int a = 0; a < batchSize; a++) {
-				caseInd = batchInds.get(a);
-				
-				double[] predicted = Evaluate(inputs[caseInd]);
 				biasGradient = new double[numLayers][neurons[0].length];
 				weightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
-				Backpropagate(avgCost, predicted, outputs[caseInd], 1, lossFunction);
-				//sum gradients for average
+				//do backpropagation
+				Backpropagate(Cost(predicted, outputs[caseInd], lossFunction), predicted, outputs[caseInd], 1, lossFunction);
+				//do weighted sum of gradients for average
 				for(int i = 0; i < numLayers; i++)  {
 					for(int j = 0; j < biases[0].length; j++) {
 						avgBiasGradient[i][j] += biasGradient[i][j] * weightedAvg;
@@ -591,7 +594,7 @@ public class NeuralNetwork implements Serializable {
 				}
 			}
 
-			//use gradients to find new parameters
+			//use average gradients to find new parameters
 			for(int i = 0; i < numLayers; i++) {
 				for(int j = 0; j < neuronsPerLayer[i]; j++) {
 					avgBiasGradient[i][j] = clamp(avgBiasGradient[i][j], -clipThreshold, clipThreshold);
