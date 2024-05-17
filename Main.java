@@ -53,6 +53,8 @@ class Main {
 						} else if(s[1].equals("topology")) {
 							System.out.print("topology: ");
 							printArr(nn.GetTopology());
+						} else if(s[1].equals("regularization")) {
+							System.out.println("regularization: " + nn.GetRegularizationType().toString() + " lambda: " + nn.GetRegularizationLambda());
 						} else if(s[1].equals("biases")) {
 							String print = "";
 							print += "\nBiases:\n";
@@ -107,6 +109,46 @@ class Main {
 						nn.Init(Double.parseDouble(s[1]));
 					} else {
 						Output("please specify a bias spread");
+						continue;
+					}
+				} else if(s[0].equals("regularization")) {
+					//modify regularization
+					if(s.length < 2) {
+						//no argument is provided
+						Output("please specify a valid property to modify: \n    - type\n    - lambda");
+						continue;
+					}
+					if(s[1].equals("type")) {
+						if(s.length < 3) {
+							//no type is provided
+							Output("please specify a regularization to apply (not case sensitive): \n    - none\n    - L1\n    - L2");
+							continue;
+						}
+						if(s[2].equalsIgnoreCase("none")) {
+							nn.SetRegularizationType(NeuralNetwork.RegularizationType.NONE);
+							Output("applying regularization...");
+						} else if(s[2].equalsIgnoreCase("L1")) {
+							nn.SetRegularizationType(NeuralNetwork.RegularizationType.L1);
+							Output("applying regularization...");
+						} else if(s[2].equalsIgnoreCase("L2")) {
+							nn.SetRegularizationType(NeuralNetwork.RegularizationType.L2);
+							Output("applying regularization...");
+						} else {
+							//invalid type is provided
+							Output("please specify a valid regularization to apply (not case sensitive): \n    - none\n    - L1\n    - L2");
+							continue;
+						}
+					} else if(s[1].equals("lambda")) {
+						if(s.length < 3) {
+							//no type is provided
+							Output("please specify a regularization lambda (strength) to set.");
+							continue;
+						}
+						nn.SetRegularizationLambda(Double.parseDouble(s[2]));
+						Output("setting lambda...");
+					} else {
+						//invalid argument is provided
+						Output("please specify a valid property to modify: \n    - type\n    - lambda");
 						continue;
 					}
 				} else if(s[0].equals("evaluate")) {
@@ -356,6 +398,10 @@ class Main {
 						continue;
 					}
 					try {
+						if(s.length < 3) {
+							Output("please specify a path to the test data and a training function:\n    - mse\n    - categorical_crossentropy");
+							continue;
+						}
 						File f = new File(s[1]);
 						BufferedReader br = new BufferedReader(new FileReader(f));
 		
@@ -468,7 +514,7 @@ class Main {
 					Output("min weight: " + minWeight + "\nmax weight: " + maxWeight + "average weight: " + avgWeight);
 				} else if(s[0].equals("help")) {
 					if(s.length == 1) {
-						Output("type help [command name] to get detailed usage info \ncommands: \n    - save\n    - load\n    - create\n    - init\n    - reset\n    - info\n    - evaluate\n    - exit\n    - modify\n    - mutate\n    - train\n    - cost\n    - mnist\n    - magnitude\n    - help");
+						Output("type help [command name] to get detailed usage info \ncommands: \n    - save\n    - load\n    - create\n    - init\n    - reset\n    - info\n    - evaluate\n    - exit\n    - modify\n    - regularization\n    - mutate\n    - train\n    - cost\n    - mnist\n    - magnitude\n    - help");
 					} else {
 						if(s[1].equals("save")) {
 							Output("syntax: save [path]\nsaves the current neural network to the specified file path");
@@ -481,13 +527,15 @@ class Main {
 						} else if(s[1].equals("reset")) {
 							Output("syntax: reset\nresets current neural network to uninitialized");
 						} else if(s[1].equals("info")) {
-							Output("syntax: info [optional 'topology/activations/weights/biases']\nprints specific or general information about the current neural network.");
+							Output("syntax: info [optional 'topology/activations/weights/biases/regularization']\nprints specific or general information about the current neural network.");
 						} else if(s[1].equals("evaluate")) {
 							Output("syntax: evaluate [optional 'mnist'] [optional mnist case #]\nevaluates the neural network for a specified input. If mnist is specified, then it will evaluate on the specified case #");
 						} else if(s[1].equals("exit")) {
 							Output("syntax: exit\nexits the program");
 						} else if(s[1].equals("modify")) {
 							Output("syntax: modify [weights/biases/activations]\nchanges a specified parameter of the current neural network");
+						} else if(s[1].equals("regularization")) {
+							Output("syntax: regularization [type/lambda] [value]\nsets regularization type or lambda (strength) of network.");
 						} else if(s[1].equals("mutate")) {
 							Output("syntax: mutate [mutation chance decimal] [variation]\nmutates neural network to simulate evolution. useful for genetic algorithms");
 						} else if(s[1].equals("train")) {

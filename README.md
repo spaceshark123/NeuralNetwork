@@ -14,7 +14,7 @@ This project provides a flexible and extensible implementation of a stochastic g
 
 ## Overview
 
-Neural networks are a fundamental building block of modern machine learning and artificial intelligence. This Java-based implementation allows you to create, train, evaluate, and use neural networks for a wide range of applications.
+Neural networks are a fundamental building block of modern machine learning and artificial intelligence. This Java-based implementation allows you to create, train, evaluate, and use neural networks for a wide range of applications using a highly user-friendly console interface or directly using the `NeuralNetwork` class for your own needs if necessary.
 
 ## Key Features
 
@@ -27,6 +27,8 @@ Neural networks are a fundamental building block of modern machine learning and 
 - **Training with SGD**: Train your neural network using Stochastic Gradient Descent (SGD) with customizable learning rate, batch size, and decay.
 
 - **Gradient Clipping**: Helps prevent exploding gradients during training by setting a gradient clipping threshold.
+
+- **Regularization Techniques**: Supports popular regularization techniques like L1 and L2 to reduce overfitting by minimizing parameter complexity.
 
 - **Save and Load Models**: Easily save trained models to disk and load them for future use.
 
@@ -54,6 +56,10 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
    String lossFunction = "mse"; // or "categorical_crossentropy" for classification
    double decay = 0.001; // Learning rate decay
    network.clipThreshold = 1; //default gradient clipping threshold
+   //set regularization of network
+   network.SetRegularizationType(NeuralNetwork.RegularizationType.L2); 
+   network.SetRegularizationLambda(0.01);
+   //train the network
    network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay);
    ```
 
@@ -144,6 +150,10 @@ This will launch the program's custom console, allowing you to control and modif
 
 - `reset`: Reset the current neural network to default
 
+- `modify`: changes parameters of neural network
+
+- `regularization`: changes regularization type (L1, L2, none) and lambda (strength) of neural network
+
 - `magnitude`: Display information about the magnitudes of the network's parameters (min/max/average)
 
 - `cost`: Calculate the cost/accuracy of the network on a test dataset
@@ -156,9 +166,9 @@ This will launch the program's custom console, allowing you to control and modif
 
 - Type a command and press Enter to execute it. Follow the prompts to provide the required information.
 
-- For example, to create a new neural network, you would type create_network, and then follow the prompts to specify the topology and activation functions.
+- For example, to create a new neural network, you would type `create`, and then follow the prompts to specify the topology and activation functions.
 
-- To train a network, use the train command and provide details like the path to the training file or specify `mnist`, number of epochs, learning rate, batch size, and loss function.
+- To train a network, use the `train` command and provide details like the path to the training file or specify `mnist`, number of epochs, learning rate, batch size, and loss function.
 
 - For evaluation, use the evaluate command, and input the data you want to predict on, or `mnist [case #]`
 

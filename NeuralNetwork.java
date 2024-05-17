@@ -35,7 +35,16 @@ public class NeuralNetwork implements Serializable {
 	public double clipThreshold = 1;
 	//whether or not to display accuracy while training (for classification models)
 	public boolean displayAccuracy = false;
-	
+	// Regularization type
+    public static enum RegularizationType {
+        NONE,
+        L1,
+        L2
+    }
+	// Regularization settings (lambda = regularization strength)
+    private double lambda = 0;
+    private RegularizationType regularizationType = RegularizationType.NONE;
+	//used in gradient descent
 	protected double[][] biasGradient;
 	protected double[][][] weightGradient;
 
@@ -49,6 +58,13 @@ public class NeuralNetwork implements Serializable {
 		biases = new double[numLayers][maxLayerSize];
 		weights = new double[numLayers][maxLayerSize][maxLayerSize];
 		activations = active.clone();
+	}
+
+	public NeuralNetwork(int[] topology, String[] active, RegularizationType regularizationType, double regularizationStrength) {
+		this(topology, active);
+		//set regularization
+		this.regularizationType = regularizationType;
+		lambda = regularizationStrength;
 	}
 
 	public NeuralNetwork() {
@@ -111,6 +127,11 @@ public class NeuralNetwork implements Serializable {
 
 	public int[] GetTopology() { return neuronsPerLayer; }
 
+    public void SetRegularizationType(RegularizationType regularizationType) { this.regularizationType = regularizationType; }
+	public void SetRegularizationLambda(double lambda) { this.lambda = lambda; }
+	public RegularizationType GetRegularizationType() { return regularizationType; }
+	public double GetRegularizationLambda() { return lambda; }
+
 	double randDouble(double min, double max) {
 		Random r = new Random();
 		return min + (max - min) * r.nextDouble();
@@ -124,6 +145,32 @@ public class NeuralNetwork implements Serializable {
 			}
 		}
 		return m;
+	}
+
+	// Total regularization term calculation
+    double regularizationTerm() {
+        double regTerm = 0.0;
+        if (regularizationType == RegularizationType.L1) {
+            // L1 regularization
+			for(int i = 1; i < numLayers; i++) {
+				for(int j = 0; j < neuronsPerLayer[i]; j++) {
+					for(int k = 0; k < neuronsPerLayer[i-1]; k++) {
+						regTerm += Math.abs(weights[i][j][k]);
+					}
+				}
+			}
+        } else if (regularizationType == RegularizationType.L2) {
+            // L2 regularization
+            for(int i = 1; i < numLayers; i++) {
+				for(int j = 0; j < neuronsPerLayer[i]; j++) {
+					for(int k = 0; k < neuronsPerLayer[i-1]; k++) {
+						regTerm += weights[i][j][k]*weights[i][j][k];
+					}
+				}
+			}
+        }
+		regTerm *= lambda;
+        return regTerm;
 	}
 
 	double linear_activation(double raw) {
@@ -300,6 +347,7 @@ public class NeuralNetwork implements Serializable {
 		String print = "Neural Network \n";
 		print += "\nTopology (neurons per layer): " + printArr(neuronsPerLayer);
 		print += "\nActivations (per layer): " + printArr(activations);
+		print += "\nRegularization: " + regularizationType.toString() + " lambda: " + lambda;
 		
 		print += "\nBiases:\n";
 		for(int i = 0; i < numLayers; i++) {
@@ -442,6 +490,8 @@ public class NeuralNetwork implements Serializable {
 				cost -= expected[i] * Math.log(Math.max(output[i], 1.0e-15d));
 			}
 		}
+		//add regularization term
+		cost += regularizationTerm();
 		return cost;
 	}
 
@@ -605,6 +655,12 @@ public class NeuralNetwork implements Serializable {
 				for(int j = 0; j < neuronsPerLayer[i]; j++) {
 					for(int k = 0; k < neuronsPerLayer[i-1]; k++) {
 						avgWeightGradient[i][j][k] = clamp(avgWeightGradient[i][j][k], -clipThreshold, clipThreshold);
+						// apply regularization gradient
+						if (regularizationType == RegularizationType.L1) {
+							avgWeightGradient[i][j][k] += lambda * Math.signum(weights[i][j][k]);
+						} else if (regularizationType == RegularizationType.L2) {
+							avgWeightGradient[i][j][k] += lambda * weights[i][j][k];
+						}
 						weights[i][j][k] = weights[i][j][k] - avgWeightGradient[i][j][k] * lr;
 					}
 				}
