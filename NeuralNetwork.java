@@ -590,9 +590,22 @@ public class NeuralNetwork implements Serializable {
 		//precompute weighted average (multiply each element by this to average out all data points in batch)
 		final double weightedAvg = 1.0 / (double) batchSize;
 		//System.out.println("clip threshold: " + clipThreshold);
-		for(int e = 0; e < epochs; e++) {
+		int epoch = 0;
+		double progress = 0; // marks the epoch and progress through current epoch as decimal
+		int batchesPerEpoch = (int)Math.ceil((double)inputs.length / batchSize);
+		int epochIteration = 0;
+		if(inputs.length % batchSize != 0) {
+			//batches wont divide evenly into samples
+			System.out.println("warning: training data size is not divisible by sample size");
+		}
+		for(int iteration = 0; epoch < epochs; iteration++) {
+			//do epoch batch stuff (iteration is the current cumulative batch iteration)
+			progress = (double)iteration*batchSize / inputs.length;
+			epochIteration = iteration % batchesPerEpoch;
+			epoch = (int)Math.floor(progress);
+
 			//do exponential learning rate decay
-			lr = learningRate * Math.pow(1 - decay, e);
+			lr = (1.0/(1.0+decay*epoch))*learningRate;
 			
 			//choose random case
 			if(batchSize == -1) {
@@ -669,9 +682,9 @@ public class NeuralNetwork implements Serializable {
 				double accuracy = 100*((double) numCorrect * weightedAvg);
 				//round to one decimal
 				accuracy = Math.round(accuracy*10.0) / 10.0;
-				progressBar(30, "Training", e+1, epochs, "accuracy: "+accuracy+"%");
+				progressBar(30, "Training", epoch+1, epochs, (epochIteration+1) + "/" + batchesPerEpoch + " accuracy: "+accuracy+"%");
 			} else {
-				progressBar(30, "Training", e+1, epochs, "");
+				progressBar(30, "Training", epoch+1, epochs, (epochIteration+1) + "/" + batchesPerEpoch);
 			}
 		}
 	}
