@@ -2,7 +2,7 @@
 
 # Neural Network Implementation in Java
 
-This project provides a flexible and extensible implementation of a stochastic gradient descent feedforward neural network in Java, wrapped up in a console user interface. The neural network is designed to be easy to use and customize, making it a valuable tool for various machine learning and deep learning tasks.
+This project provides a flexible and extensible implementation of a stochastic gradient descent feedforward neural network in Java, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use and customize, making it a valuable tool for various machine learning and deep learning tasks.
 
 ## Table of Contents
 
@@ -14,9 +14,11 @@ This project provides a flexible and extensible implementation of a stochastic g
 
 ## Overview
 
-Neural networks are a fundamental building block of modern machine learning and artificial intelligence. This Java-based implementation allows you to create, train, evaluate, and use neural networks for a wide range of applications using a highly user-friendly console interface or directly using the `NeuralNetwork` class for your own needs if necessary.
+Neural networks are a fundamental building block of modern machine learning and artificial intelligence. This Java-based implementation allows you to create, train, evaluate, and use neural networks for a wide range of applications using a highly user-friendly console/GUI interface or directly using the `NeuralNetwork` class for your own needs if necessary.
 
 ## Key Features
+
+- **Realtime Accuracy Graph While Training** Displays realtime graph of accuracy over epochs for mnist networks while training, allowing users to visualize improvements as they occur.
 
 - **Customizable Topology**: Define the number of neurons in each layer and activation functions for each layer.
   
@@ -117,15 +119,15 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
 
 To use this neural network implementation, you can interact with a custom console provided by the program. Follow these steps to get started:
 
-1. **Compile the Code**: First, compile the Java code by running the following command in your terminal:
+1. **Compile the Code**: First, make sure you are working in the project directory. Then, compile the Java code by running the following command in your terminal:
 
    ```shell
-   javac Main.java
+   javac -cp ".:./libraries/jfreechart-1.5.3.jar" Main.java
 	```
 	Run the Program: Start the program by running the following command:
 
 	```shell
-	java Main
+	java -cp ".:./libraries/jfreechart-1.5.3.jar" Main
 	```
 
 This will launch the program's custom console, allowing you to control and modify neural networks.
@@ -168,11 +170,11 @@ This will launch the program's custom console, allowing you to control and modif
 
 - For example, to create a new neural network, you would type `create`, and then follow the prompts to specify the topology and activation functions.
 
-- To train a network, use the `train` command and provide details like the path to the training file or specify `mnist`, number of epochs, learning rate, batch size, and loss function.
+- To train a network, use the `train` command and provide details like the path to the training file or specify `mnist`, number of epochs, learning rate, batch size, loss function, learning decay rate
 
 - For evaluation, use the evaluate command, and input the data you want to predict on, or `mnist [case #]`
 
-- The mnist dataset has been built into the program to allow for building/evaluating hand-drawn digit recognition networks directly using the console.
+- The mnist dataset has been built into the program to allow for building/evaluating hand-drawn digit recognition networks directly using the console. mnist networks MUST HAVE input size __784__ and output size __10__. In the majority of cases, the output layer has __softmax__ activation and is trained using the __categorical_crossentropy__ loss function.
 
 #### Save and Load Models:
 
@@ -199,7 +201,7 @@ A few neural networks and their training sets have been pre-included into the pr
 - `SavedNetwork1`: simple neural network to add 2 numbers
 - `SavedNetwork2`: deep neural network to add 2 numbers
 - `TrainSet1`: training/test dataset for adding 2 numbers (can be used for `SavedNetwork1` and `SavedNetwork2`)
-- `MNISTNetwork`: an untrained neural network with the correct topology to evaluate MNIST cases (digit recognition). accuracy ≈ 10%
-- `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition). accuracy ≈ 78%
+- `MNISTNetwork`: an untrained neural network with the correct topology to evaluate MNIST cases (digit recognition). accuracy ≈ 12%
+- `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition). accuracy ≈ 83%
 
 

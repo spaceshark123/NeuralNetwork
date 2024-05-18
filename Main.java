@@ -281,7 +281,7 @@ class Main {
 								System.out.println();
 
 								//set max batchSize to 1000
-								int batchSize = Math.min(mnistImages.length, 128);
+								int batchSize = mnistImages.length;
 								if(s.length >= 6) {
 									batchSize = Integer.parseInt(s[5]);
 								}
