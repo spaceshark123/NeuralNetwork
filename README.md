@@ -202,6 +202,6 @@ A few neural networks and their training sets have been pre-included into the pr
 - `SavedNetwork2`: deep neural network to add 2 numbers
 - `TrainSet1`: training/test dataset for adding 2 numbers (can be used for `SavedNetwork1` and `SavedNetwork2`)
 - `MNISTNetwork`: an untrained neural network with the correct topology to evaluate MNIST cases (digit recognition). accuracy ≈ 12%
-- `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition). accuracy ≈ 83%
+- `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition). accuracy ≈ 87%
 
 
