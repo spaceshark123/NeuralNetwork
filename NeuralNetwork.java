@@ -11,22 +11,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.Collections;
 
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartPanel;
-import org.jfree.chart.JFreeChart;
-import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
-import org.jfree.chart.axis.NumberTickUnit;
-import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.title.TextTitle;
-
-import javax.swing.*;
-import java.text.DecimalFormat;
-import java.awt.*;
-
 public class NeuralNetwork implements Serializable {
 	private static final long serialVersionUID = 1L;
 	
@@ -52,11 +36,15 @@ public class NeuralNetwork implements Serializable {
 	//whether or not to display accuracy while training (for classification models)
 	public boolean displayAccuracy = false;
 	// Regularization type
-    public static enum RegularizationType {
-        NONE,
-        L1,
-        L2
-    }
+	public static enum RegularizationType {
+		NONE,
+		L1,
+		L2
+	}
+	// Callback interface for training updates
+	public static interface TrainingCallback {
+		void onEpochUpdate(int epoch, int batch, double progress, double accuracy);
+	}
 	// Regularization settings (lambda = regularization strength)
     private double lambda = 0;
     private RegularizationType regularizationType = RegularizationType.NONE;
@@ -592,7 +580,7 @@ public class NeuralNetwork implements Serializable {
     }
 
 	//uses SGD (stochastic gradient descent)
-	public void Train(double[][] inputs, double[][] outputs, int epochs, double learningRate, int batchSize, String lossFunction, double decay) {
+	public void Train(double[][] inputs, double[][] outputs, int epochs, double learningRate, int batchSize, String lossFunction, double decay, TrainingCallback callback) {
 		double lr = learningRate;
 		//list of indices for data points, will be randomized in each epoch
 		List<Integer> indices = new ArrayList<Integer>(inputs.length);
@@ -614,58 +602,6 @@ public class NeuralNetwork implements Serializable {
 			//batches wont divide evenly into samples
 			System.out.println("warning: training data size is not divisible by sample size");
 		}
-
-
-		// Create dataset
-        XYSeries accuracySeries = new XYSeries("Accuracy");
-        XYSeriesCollection dataset = new XYSeriesCollection();
-		dataset.addSeries(accuracySeries);
-		TextTitle caption = new TextTitle("Current Epoch: 0, Current Batch: 0, Current Accuracy: 0.0%");
-		JFreeChart chart = ChartFactory.createXYLineChart(
-					"Accuracy over Epochs",
-					"Epoch",
-					"Accuracy",
-					dataset,
-					PlotOrientation.VERTICAL,
-					true,
-					true,
-					false);
-
-		// Create chart
-		if (displayAccuracy) {
-			// Customize the plot
-			XYPlot plot = chart.getXYPlot();
-			XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
-			renderer.setSeriesPaint(0, Color.RED);
-			plot.setRenderer(renderer);
-			//plot.getDomainAxis().setRange(0, epochs);
-        	plot.getRangeAxis().setRange(0, 100);
-
-			// Customize the domain axis to display whole numbers only
-			NumberAxis domainAxis = (NumberAxis) plot.getDomainAxis();
-			domainAxis.setTickUnit(new NumberTickUnit(1));
-
-			// Customize the range axis to display percentages
-			NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
-			DecimalFormat percentFormat = new DecimalFormat("0.0%");
-			percentFormat.setMultiplier(1);
-			rangeAxis.setNumberFormatOverride(percentFormat);
-
-			// Add a dynamic caption to the chart
-			chart.addSubtitle(caption);
-
-			// Create Panel
-			ChartPanel panel = new ChartPanel(chart);
-			panel.setPreferredSize(new Dimension(800, 600));
-			JFrame frame = new JFrame();
-			frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-			frame.getContentPane().add(panel);
-			frame.pack();
-			// Set the frame to always be on top
-			frame.setAlwaysOnTop(true);
-			frame.setVisible(true);
-		}
-
 		for(int iteration = 0; epoch < epochs; iteration++) {
 			//do epoch batch stuff (iteration is the current cumulative batch iteration)
 			progress = (double)iteration*batchSize / inputs.length;
@@ -750,11 +686,8 @@ public class NeuralNetwork implements Serializable {
 				double accuracy = 100*((double) numCorrect * weightedAvg);
 				//round to one decimal
 				accuracy = Math.round(accuracy * 100.0) / 100.0;
-				accuracySeries.add(progress, accuracy);
-				// Update caption
-				if(epoch+1 <= epochs) {
-					caption.setText(String.format("Current Epoch: %d, Current Batch: %d, Current Accuracy: %f%%", epoch+1, (epochIteration+1), accuracy));
-					chart.fireChartChanged();
+				if (callback != null) {
+					callback.onEpochUpdate(epoch + 1, epochIteration + 1, progress, accuracy);
 				}
 				progressBar(30, "Training", epoch+1, epochs, (epochIteration+1) + "/" + batchesPerEpoch + " accuracy: "+accuracy+"%");
 			} else {

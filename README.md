@@ -18,7 +18,9 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 ## Key Features
 
-- **Realtime Accuracy Graph While Training** Displays realtime graph of accuracy over epochs for mnist networks while training, allowing users to visualize improvements as they occur.
+- **Realtime Accuracy Graph While Training**: Displays realtime graph of accuracy over epochs for mnist networks while training, allowing users to visualize improvements as they occur.
+
+- **Training Callback Interface**: Provides an interface that includes a callback method that can be passed into the Train function to execute custom code on each mini-batch iteration of training.
 
 - **Customizable Topology**: Define the number of neurons in each layer and activation functions for each layer.
   
@@ -61,9 +63,28 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
    //set regularization of network
    network.SetRegularizationType(NeuralNetwork.RegularizationType.L2); 
    network.SetRegularizationLambda(0.01);
-   //train the network
-   network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay);
+   //train the network with no callback
+   network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, null);
    ```
+
+   Or, provide a training callback by passing in a class implementing the static `NeuralNetwork.TrainingCallback` interface as an argument. This can be used to make your own custom train addons like a graph visualization of the data.
+
+	```java
+	public class Callback implements NeuralNetwork.TrainingCallback {
+		@Override
+		public void onEpochUpdate(int epoch, int batch, double progress, double accuracy) {
+			System.out.println("this statement is run for every mini-batch in training");
+		}
+	}
+
+	class Main {
+		public static void main(String[] args) {
+			...
+			Callback callback = new Callback();
+			network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, callback);
+		}
+	}
+	```
 
 3. **Mutation**: Mutate the neural network for a genetic algorithm (evolution).
 
@@ -174,7 +195,7 @@ This will launch the program's custom console, allowing you to control and modif
 
 - For evaluation, use the evaluate command, and input the data you want to predict on, or `mnist [case #]`
 
-- The mnist dataset has been built into the program to allow for building/evaluating hand-drawn digit recognition networks directly using the console. mnist networks MUST HAVE input size __784__ and output size __10__. In the majority of cases, the output layer has __softmax__ activation and is trained using the __categorical_crossentropy__ loss function.
+- The mnist dataset has been built into the program to allow for building/evaluating hand-drawn digit recognition networks directly using the console and recieving a realtime accuracy visualization to assist with training. mnist networks MUST HAVE input size __784__ and output size __10__. In the majority of cases, the output layer has __softmax__ activation and is trained using the __categorical_crossentropy__ loss function.
 
 #### Save and Load Models:
 

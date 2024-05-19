@@ -278,7 +278,6 @@ class Main {
 									Output("invalid loss function. choices are:\n    - mse\n    - categorical_crossentropy");
 									continue;
 								}
-								System.out.println();
 
 								//set max batchSize to 1000
 								int batchSize = mnistImages.length;
@@ -297,7 +296,9 @@ class Main {
 								nn.clipThreshold = clipThreshold;
 								//since mnist is a classification model, display accuracy as we go
 								nn.displayAccuracy = true;
-								nn.Train(mnistImages, mnistOutputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, s[4], decay);
+								int epochs = Integer.parseInt(s[2]);
+								ChartUpdater chartUpdater = new ChartUpdater(epochs);
+								nn.Train(mnistImages, mnistOutputs, epochs, Double.parseDouble(s[3]), batchSize, s[4], decay, chartUpdater);
 								System.out.println();
 							}
 						} else {
@@ -354,7 +355,7 @@ class Main {
 							}
 							nn.clipThreshold = clipThreshold;
 							nn.displayAccuracy = false;
-							nn.Train(inputs, outputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, s[4], decay);
+							nn.Train(inputs, outputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, s[4], decay, null);
 							System.out.println();
 						}
 					} catch(FileNotFoundException e) {
