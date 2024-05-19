@@ -67,7 +67,7 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
    network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, null);
    ```
 
-   Or, provide a training callback by passing in a class implementing the static `NeuralNetwork.TrainingCallback` interface as an argument. This can be used to make your own custom train addons like a graph visualization of the data.
+   Or, provide a training callback by passing in a class implementing the static `NeuralNetwork.TrainingCallback` interface as an argument. This can be used to make your own custom train addons like a graph visualization of the data. The `ChartUpdater` class has been provided to visualize accuracy data using this callback interface.
 
 	```java
 	public class Callback implements NeuralNetwork.TrainingCallback {
@@ -140,15 +140,30 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
 
 To use this neural network implementation, you can interact with a custom console provided by the program. Follow these steps to get started:
 
-1. **Compile the Code**: First, make sure you are working in the project directory. Then, compile the Java code by running the following command in your terminal:
+1. **Compile the Code**: First, make sure you are working in the project directory. If you are running the full project with the console interface, run the following commands to compile and run the program:
+
+	***Compile***:
 
    ```shell
    javac -cp ".:./libraries/jfreechart-1.5.3.jar" Main.java
 	```
-	Run the Program: Start the program by running the following command:
+	***Run***
 
 	```shell
 	java -cp ".:./libraries/jfreechart-1.5.3.jar" Main
+	```
+
+	Or, if you are just using the `NeuralNetwork` class, the jfreechart library can be excluded, simplifying the commands to:
+
+	***Compile***:
+
+   ```shell
+   javac Main.java
+	```
+	***Run***
+
+	```shell
+	java Main
 	```
 
 This will launch the program's custom console, allowing you to control and modify neural networks.
