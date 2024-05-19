@@ -28,11 +28,13 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 - **Weight Initialization**: Utilizes weight initialization techniques like Xavier (for linear, sigmoid, and tanh) and He (for relu) for better convergence.
 
-- **Training with SGD**: Train your neural network using Stochastic Gradient Descent (SGD) with customizable learning rate, batch size, and decay.
+- **Training with SGD**: Train your neural network using Stochastic Gradient Descent (SGD) with customizable learning rate, mini-batch size, and decay.
 
 - **Gradient Clipping**: Helps prevent exploding gradients during training by setting a gradient clipping threshold.
 
 - **Regularization Techniques**: Supports popular regularization techniques like L1 and L2 to reduce overfitting by minimizing parameter complexity.
+
+- **Momentum** Uses momentum-based gradient descent to accelerate convergence and dampen oscillation.
 
 - **Save and Load Models**: Easily save trained models to disk and load them for future use.
 
@@ -58,13 +60,14 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
    double learningRate = 0.01;
    int batchSize = 32;
    String lossFunction = "mse"; // or "categorical_crossentropy" for classification
-   double decay = 0.001; // Learning rate decay
+   double decay = 0.1; // Learning rate decay
+   double momentum = 0.9;
    network.clipThreshold = 1; //default gradient clipping threshold
    //set regularization of network
    network.SetRegularizationType(NeuralNetwork.RegularizationType.L2); 
    network.SetRegularizationLambda(0.01);
    //train the network with no callback
-   network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, null);
+   network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, momentum, null);
    ```
 
    Or, provide a training callback by passing in a class implementing the static `NeuralNetwork.TrainingCallback` interface as an argument. This can be used to make your own custom train addons like a graph visualization of the data. The `ChartUpdater` class has been provided to visualize accuracy data using this callback interface.
@@ -173,6 +176,8 @@ This will launch the program's custom console, allowing you to control and modif
 - `help`: Display a list of available commands and their descriptions.
 
 - `create`: Create a new neural network by specifying its topology and activation functions.
+
+- `init`: initializes the neural network parameters (weights and biases) with the specified bias spread and weight initialization method. ('he' or 'xavier')
 
 - `load`: Load a pre-trained neural network from a saved model file.
 

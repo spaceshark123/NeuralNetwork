@@ -82,6 +82,46 @@ public class NeuralNetwork implements Serializable {
 		InitBiases(biasSpread);
 	}
 
+	//initialize network with random starting values using a specified weight initialization method ('he' or 'xavier')
+	public void Init(String weightInitMethod, double biasSpread) {
+		ClearNeurons();
+		InitWeights(weightInitMethod);
+		InitBiases(biasSpread);
+	}
+
+	void InitWeights(String initMethod) {
+		//initMethod is either "he" or "xavier"
+		if (initMethod.equals("he")) {
+			Random r = new Random();
+			for (int i = 1; i < numLayers; i++) {
+				int n = neuronsPerLayer[i - 1];
+				//he weight initialization (for relu) (gaussian distribution)
+				double mean = 0, std = Math.sqrt(2.0 / n);
+				for (int j = 0; j < neuronsPerLayer[i]; j++) {
+					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
+						weights[i][j][k] = r.nextGaussian() * std + mean;
+					}
+				}
+				
+			}
+		} else if (initMethod.equals("xavier")) {
+			for (int i = 1; i < numLayers; i++) {
+				int n = neuronsPerLayer[i - 1];
+				double min, max;
+				//xavier weight initialization (for linear, sigmoid, tanh, etc.) (uniform distribution)
+				max = 1 / Math.sqrt(n);
+				min = -max;
+				for (int j = 0; j < neuronsPerLayer[i]; j++) {
+					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
+						weights[i][j][k] = randDouble(min, max);
+					}
+				}
+			}
+		} else {
+			InitWeights();
+		}
+	}
+
 	void InitWeights() {
 		for(int i = 1; i < numLayers; i++) {
 			int n = neuronsPerLayer[i-1];
@@ -198,8 +238,6 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	double softmax_activation(double raw, double[] neuronValues) {
-		//this is a slightly modified version of softmax meant to normalize inputs by subtracting the max
-		//this way, there are less nan overflow errors with the exponentiation
     	double maxVal = max(neuronValues);
 
 		// Compute the normalization factor (sum of exponentials)
@@ -208,46 +246,12 @@ public class NeuralNetwork implements Serializable {
 			total += Math.exp(value - maxVal);
 		}
 		// Compute the softmax activation
-		return Math.exp(raw - maxVal) / Math.max(total, 1.0e-15);
+		return Math.exp(raw - maxVal - Math.log(Math.max(total, 1.0e-15)));
 	}
 
 	double softmax_der(double[] neuronValues, int index) {
-		for(int i = 0; i < neuronValues.length; i++) {
-			if(Double.isNaN(neuronValues[i])) {
-				System.out.println("NaN error in softmax activation der: input neuron value" + i + " is NaN"); 
-			}
-		}
-		double[] softmaxValues = new double[neuronValues.length];
-        double total = 0.0;
-
-        // Calculate the softmax values
-        for (double i : neuronValues) {
-			if(Double.isNaN(Math.exp(i-max(neuronValues)))) {
-				System.out.println("NaN error in softmax activation der: exp of neuron value is NaN");
-			}
-            total += Math.exp(i-max(neuronValues));
-        }
-		if(Double.isNaN(total)) {
-			System.out.println("NaN error in softmax activation der: total exp value is NaN");
-		}
-        for (int i = 0; i < neuronValues.length; i++) {
-			if(Double.isNaN(Math.exp(neuronValues[i]-max(neuronValues)) / Math.max(total, 1.0e-15))) {
-				System.out.println("NaN error in softmax activation der: softmax value is NaN");
-				System.out.println("neuron value: " + neuronValues[i] + " total: " + total);
-			}
-			if(Double.isNaN(Math.max(total, 1.0e-15))) {
-				System.out.println("NaN error in softmax activation der: max of total exp value is NaN");
-			}
-            softmaxValues[i] = Math.exp(neuronValues[i]-max(neuronValues)) / Math.max(total, 1.0e-15);
-        }
-
-        // Calculate the derivative using the diagonal elements of the Jacobian matrix
-        double[] softmaxDerivative = new double[neuronValues.length];
-        for (int i = 0; i < neuronValues.length; i++) {
-            softmaxDerivative[i] = softmaxValues[i] * (1.0 - softmaxValues[i]);
-        }
-
-        return softmaxDerivative[index];
+		double softmax = softmax_activation(neuronValues[index], neuronValues);
+        return softmax * (1.0 - softmax);
 	}
 
 	double activate(double raw, int layer) {
@@ -580,7 +584,7 @@ public class NeuralNetwork implements Serializable {
     }
 
 	//uses SGD (stochastic gradient descent)
-	public void Train(double[][] inputs, double[][] outputs, int epochs, double learningRate, int batchSize, String lossFunction, double decay, TrainingCallback callback) {
+	public void Train(double[][] inputs, double[][] outputs, int epochs, double learningRate, int batchSize, String lossFunction, double decay, double momentum, TrainingCallback callback) {
 		double lr = learningRate;
 		//list of indices for data points, will be randomized in each epoch
 		List<Integer> indices = new ArrayList<Integer>(inputs.length);
@@ -593,15 +597,17 @@ public class NeuralNetwork implements Serializable {
 		int currentInd = 0;
 		//precompute weighted average (multiply each element by this to average out all data points in batch)
 		final double weightedAvg = 1.0 / (double) batchSize;
-		//System.out.println("clip threshold: " + clipThreshold);
 		int epoch = 0;
 		double progress = 0; // marks the epoch and progress through current epoch as decimal
 		int batchesPerEpoch = (int)Math.ceil((double)inputs.length / batchSize);
 		int epochIteration = 0;
-		if(inputs.length % batchSize != 0) {
+		if (inputs.length % batchSize != 0) {
 			//batches wont divide evenly into samples
 			System.out.println("warning: training data size is not divisible by sample size");
 		}
+		//momentum vectors initialized to 0
+		double[][] vBiases = new double[numLayers][biases[0].length];
+		double[][][] vWeights = new double[numLayers][weights[0].length][weights[0][0].length];
 		for(int iteration = 0; epoch < epochs; iteration++) {
 			//do epoch batch stuff (iteration is the current cumulative batch iteration)
 			progress = (double)iteration*batchSize / inputs.length;
@@ -665,7 +671,10 @@ public class NeuralNetwork implements Serializable {
 			for(int i = 0; i < numLayers; i++) {
 				for(int j = 0; j < neuronsPerLayer[i]; j++) {
 					avgBiasGradient[i][j] = clamp(avgBiasGradient[i][j], -clipThreshold, clipThreshold);
-					biases[i][j] = biases[i][j] - avgBiasGradient[i][j] * lr;
+					//do momentum
+					vBiases[i][j] = momentum * vBiases[i][j] - avgBiasGradient[i][j] * lr;
+					//apply velocity
+					biases[i][j] = biases[i][j] + vBiases[i][j];
 				}
 			}
 			for(int i = 1; i < numLayers; i++) {
@@ -678,7 +687,10 @@ public class NeuralNetwork implements Serializable {
 						} else if (regularizationType == RegularizationType.L2) {
 							avgWeightGradient[i][j][k] += lambda * weights[i][j][k];
 						}
-						weights[i][j][k] = weights[i][j][k] - avgWeightGradient[i][j][k] * lr;
+						//do momentum
+						vWeights[i][j][k] = momentum * vWeights[i][j][k] - avgWeightGradient[i][j][k] * lr;
+						//apply velocity
+						weights[i][j][k] = weights[i][j][k] + vWeights[i][j][k];
 					}
 				}
 			}

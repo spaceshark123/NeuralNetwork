@@ -104,11 +104,14 @@ class Main {
 					Output("Created neural network");
 				} else if(s[0].equals("init")) {
 					//initialize neural network
-					if(s.length == 2) {
+					if(s.length >= 2) {
 						Output("initializing weights and biases...");
 						nn.Init(Double.parseDouble(s[1]));
+						if(s.length >= 3) {
+							nn.Init(s[2], Double.parseDouble(s[1]));
+						}
 					} else {
-						Output("please specify a bias spread");
+						Output("please specify a bias spread and optionally a weight initialization method ('he' or 'xavier')");
 						continue;
 					}
 				} else if(s[0].equals("regularization")) {
@@ -259,7 +262,7 @@ class Main {
 					}
 				} else if(s[0].equals("train")) {
 					if(s.length < 5) {
-						Output("please specify the following:\n    - path to the training set\n    - number of epochs\n    - learning rate\n    - loss function\n    - batch size (optional)\n    - decay rate (optional)\n    - clip threshold (optional)");
+						Output("please specify the following:\n    - path to the training set\n    - number of epochs\n    - learning rate\n    - loss function\n    - batch size (optional)\n    - decay rate (optional)\n    - clip threshold (optional)\n    - momentum (optional)");
 						continue;
 					}
 					//trainset file must be formatted:
@@ -294,11 +297,15 @@ class Main {
 									clipThreshold = Double.parseDouble(s[7]);
 								}
 								nn.clipThreshold = clipThreshold;
+								double momentum = 0.9;
+								if(s.length >= 9) {
+									momentum = Double.parseDouble(s[8]);
+								}
 								//since mnist is a classification model, display accuracy as we go
 								nn.displayAccuracy = true;
 								int epochs = Integer.parseInt(s[2]);
 								ChartUpdater chartUpdater = new ChartUpdater(epochs);
-								nn.Train(mnistImages, mnistOutputs, epochs, Double.parseDouble(s[3]), batchSize, s[4], decay, chartUpdater);
+								nn.Train(mnistImages, mnistOutputs, epochs, Double.parseDouble(s[3]), batchSize, s[4], decay, momentum, chartUpdater);
 								System.out.println();
 							}
 						} else {
@@ -354,8 +361,12 @@ class Main {
 								clipThreshold = Double.parseDouble(s[7]);
 							}
 							nn.clipThreshold = clipThreshold;
+							double momentum = 0.9;
+							if(s.length >= 9) {
+								momentum = Double.parseDouble(s[8]);
+							}
 							nn.displayAccuracy = false;
-							nn.Train(inputs, outputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, s[4], decay, null);
+							nn.Train(inputs, outputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, s[4], decay, momentum, null);
 							System.out.println();
 						}
 					} catch(FileNotFoundException e) {
@@ -524,7 +535,7 @@ class Main {
 						} else if(s[1].equals("create")) {
 							Output("syntax: create\ncreates a custom neural network with specified properties");
 						} else if(s[1].equals("init")) {
-							Output("syntax: init [bias spread]\ninitializes current neural network parameters with random starting values");
+							Output("syntax: init [bias spread] [optional: weight initialization method, 'he' or 'xavier']\ninitializes current neural network parameters with random starting values and an optional weight initialization method. use 'he' for relu and 'xavier' for sigmoid/tanh");
 						} else if(s[1].equals("reset")) {
 							Output("syntax: reset\nresets current neural network to uninitialized");
 						} else if(s[1].equals("info")) {
@@ -540,7 +551,7 @@ class Main {
 						} else if(s[1].equals("mutate")) {
 							Output("syntax: mutate [mutation chance decimal] [variation]\nmutates neural network to simulate evolution. useful for genetic algorithms");
 						} else if(s[1].equals("train")) {
-							Output("syntax: train [training data file path/'mnist'] [epochs] [learning rate] [loss function] [optional: batch size] [optional: decay rate] [optional: clip threshold]\ntrains neural network on specified training data or mnist dataset based on specified hyperparameters. loss function choices are\n    - mse\n    - categorical_crossentropy\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
+							Output("syntax: train [training data file path/'mnist'] [epochs] [learning rate] [loss function] [optional: batch size, default=input size] [optional: decay rate, default=0] [optional: clip threshold, default=1] [optional: momentum, default=0.9]\ntrains neural network on specified training data or mnist dataset based on specified hyperparameters. loss function choices are\n    - mse\n    - categorical_crossentropy\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("cost")) {
 							Output("syntax: cost [test data file path] [loss function] or cost mnist\nreturns the average cost of the neural network for the specified dataset or the accuracy percentage for the mnist dataset. loss function choices are\n    - mse\n    - categorical_crossentropy\ntest data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("help")) {
