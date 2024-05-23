@@ -246,7 +246,7 @@ public class NeuralNetwork implements Serializable {
 			total += Math.exp(value - maxVal);
 		}
 		// Compute the softmax activation
-		return Math.exp(raw - maxVal - Math.log(Math.max(total, 1.0e-15)));
+		return Math.exp(raw - maxVal - Math.log(total));
 	}
 
 	double softmax_der(double[] neuronValues, int index) {
@@ -274,19 +274,23 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	double activate_der(double raw, int layer, int index) {
+		double val;
 		switch(activations[layer]) {
 			case "linear":
 				return 1;
 			case "sigmoid":
-				if(Double.isNaN(sigmoid_activation(raw) * (1 - sigmoid_activation(raw)))) {
+				double sigmoidVal = sigmoid_activation(raw);
+				val = sigmoidVal * (1 - sigmoidVal);
+				if(Double.isNaN(val)) {
 					System.out.println("NaN error in sigmoid activation der");
 				}
-				return sigmoid_activation(raw) * (1 - sigmoid_activation(raw));
+				return val;
 			case "tanh":
-				if(Double.isNaN(Math.pow(1d / Math.cosh(raw), 2))) {
+				val = Math.pow(1d / Math.cosh(raw), 2);
+				if(Double.isNaN(val)) {
 					System.out.println("NaN error in tanh activation der");
 				}
-				return Math.pow(1d / Math.cosh(raw), 2);
+				return val;
 			case "relu":
 				if(raw <= 0) {
 					return 0;
@@ -296,10 +300,11 @@ public class NeuralNetwork implements Serializable {
 			case "binary":
 				return 0;
 			case "softmax":
-				if(Double.isNaN(softmax_der(Arrays.copyOfRange(neuronsRaw[layer], 0, neuronsPerLayer[layer]), index))) {
+				val = softmax_der(Arrays.copyOfRange(neuronsRaw[layer], 0, neuronsPerLayer[layer]), index);
+				if(Double.isNaN(val)) {
 					System.out.println("NaN error in softmax activation der");
 				}
-				return softmax_der(Arrays.copyOfRange(neuronsRaw[layer], 0, neuronsPerLayer[layer]), index);
+				return val;
 			default:
 				return 1;
 		}
@@ -495,7 +500,7 @@ public class NeuralNetwork implements Serializable {
 			}
 		} else if(lossFunction.equals("categorical_crossentropy")) {
 			for(int i = 0; i < output.length; i++) {
-				cost -= expected[i] * Math.log(Math.max(output[i], 1.0e-15d));
+				cost -= expected[i] * Math.log(output[i]+1.0e-15d);
 			}
 		}
 		//add regularization term
@@ -514,7 +519,7 @@ public class NeuralNetwork implements Serializable {
 			if(Double.isNaN(-expected / (Math.max(predicted, 1.0e-15)))) {
 				System.out.println("NaN error in cost derivative crossentropy: expected: " + expected + " predicted: " + predicted);
 			}
-			return -expected / (Math.max(predicted, 1.0e-15));
+			return -expected / (predicted+1.0e-15);
 		}
 		return 1;
 	}
