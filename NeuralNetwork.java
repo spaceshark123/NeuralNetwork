@@ -524,13 +524,18 @@ public class NeuralNetwork implements Serializable {
 		return 1;
 	}
 
-	double[] Backpropagate(double c, double[] predicted, double[] expected, int layer, String lossFunction) {
+	double[] Backpropagate(double[] predicted, double[] expected, int layer, String lossFunction) {
 		double[] neuronGradients = new double[neuronsPerLayer[layer]];
 
 		//base case
 		if(layer == numLayers - 1) {
 			//last layer (output layer)
-			for(int i = 0; i < neuronsPerLayer[layer]; i++) {
+			for (int i = 0; i < neuronsPerLayer[layer]; i++) {
+				if (lossFunction.equals("categorical_crossentropy") && activations[layer].equals("softmax")) {
+					// Softmax with categorical crossentropy simplification to speed up computation
+					neuronGradients[i] = predicted[i] - expected[i];
+					continue;
+				}
 				neuronGradients[i] = cost_der(predicted[i], expected[i], lossFunction) * activate_der(neuronsRaw[layer][i], layer, i);
 			}
 			//set weights/biases
@@ -552,7 +557,7 @@ public class NeuralNetwork implements Serializable {
 		}
 		
 		//recursive case
-		double[] nextLayerBackpropagate = Backpropagate(c, predicted, expected, layer+1, lossFunction);
+		double[] nextLayerBackpropagate = Backpropagate(predicted, expected, layer+1, lossFunction);
 		double nextLayerSum = 0;
 		double[] nextLayerWeightedSum = new double[neuronsPerLayer[layer]];
 		for(int i = 0; i < neuronsPerLayer[layer+1]; i++) {
@@ -656,7 +661,7 @@ public class NeuralNetwork implements Serializable {
 				biasGradient = new double[numLayers][neurons[0].length];
 				weightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
 				//do backpropagation
-				Backpropagate(Cost(predicted, outputs[caseInd], lossFunction), predicted, outputs[caseInd], 1, lossFunction);
+				Backpropagate(predicted, outputs[caseInd], 1, lossFunction);
 				//do weighted sum of gradients for average
 				for(int i = 0; i < numLayers; i++)  {
 					for(int j = 0; j < biases[0].length; j++) {
