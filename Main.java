@@ -308,7 +308,6 @@ class Main {
 								int epochs = Integer.parseInt(s[2]);
 								ChartUpdater chartUpdater = new ChartUpdater(epochs);
 								nn.Train(mnistImages, mnistOutputs, epochs, Double.parseDouble(s[3]), batchSize, lossFunction, decay, momentum, chartUpdater);
-								System.out.println();
 							}
 						} else {
 							//train on custom file
@@ -371,7 +370,6 @@ class Main {
 							String lossFunction = s[4];
 							lossFunction = lossFunction.equals("cce") ? "categorical_crossentropy" : lossFunction;
 							nn.Train(inputs, outputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, lossFunction, decay, momentum, null);
-							System.out.println();
 						}
 					} catch(FileNotFoundException e) {
 						Output("file not found");
@@ -671,13 +669,14 @@ class Main {
 		String filled = "█";
 		String unfilled = "░";
 		double fill = (double) current / total;
-		if(fill >= 0 && fill <= 1) {
+		if (fill >= 0 && fill <= 1) {
 			//set progress bar
-			int fillAmount = (int)Math.ceil(fill * width);
-			String bar = title + ": " + filled.repeat(fillAmount) + unfilled.repeat(width - fillAmount) + " " + current + "/" + total + " " + "\r";
-			System.out.print(bar);
-		 }
-	} 
+			int fillAmount = (int) Math.ceil(fill * width);
+			StringBuilder bar = new StringBuilder();
+			bar.append(title).append(": ").append(filled.repeat(fillAmount)).append(unfilled.repeat(width - fillAmount)).append(" ").append(current).append("/").append(total).append("\r");
+			System.out.print(bar.toString());
+		}
+	}
 
 	static boolean contains(String[] s, String value) {
 		for(int i = 0; i < s.length; i++) {

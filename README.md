@@ -2,7 +2,7 @@
 
 # Neural Network Implementation in Java
 
-This project provides a flexible and extensible implementation of a stochastic gradient descent feedforward neural network in Java, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use and customize, making it a valuable tool for various machine learning and deep learning tasks.
+This project provides a flexible and extensible implementation of a multithreaded stochastic gradient descent feedforward neural network in Java, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use and customize, making it a valuable tool for various machine learning and deep learning tasks.
 
 ## Table of Contents
 
@@ -20,6 +20,8 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 - **Realtime Accuracy Graph While Training**: Displays realtime graph of accuracy over epochs for mnist networks while training, allowing users to visualize improvements as they occur.
 
+- **Parallelism and Multithreading**: Uses parallel computing and multithreading to dramatically accelerate computation time for evaluation and training mini-batches.
+
 - **Training Callback Interface**: Provides an interface that includes a callback method that can be passed into the Train function to execute custom code on each mini-batch iteration of training.
 
 - **Customizable Topology**: Define the number of neurons in each layer and activation functions for each layer.
@@ -30,7 +32,7 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 - **Weight Initialization**: Utilizes weight initialization techniques like Xavier (for linear, sigmoid, and tanh) and He (for relu) for better convergence.
 
-- **Training with SGD**: Train your neural network using Stochastic Gradient Descent (SGD) with customizable learning rate, mini-batch size, and decay.
+- **Training with SGD**: Train your neural network using mini-batched Stochastic Gradient Descent (SGD) with customizable learning rate, mini-batch size, and decay.
 
 - **Gradient Clipping**: Helps prevent exploding gradients during training by setting a gradient clipping threshold.
 
@@ -53,7 +55,7 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
    network.Init(0.1); //initializes weights and biases according to spread amount
    ```
 
-2. **Training**: Train the neural network using your dataset and desired hyperparameters.
+2. **Training**: Train the neural network using your dataset and desired hyperparameters, taking advantage of multiple CPU cores to speed up training time.
 
    ```java
    double[][] inputs = // Your input data

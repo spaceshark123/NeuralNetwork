@@ -11,9 +11,12 @@ import java.util.List;
 import java.util.Random;
 import java.util.Collections;
 
+import java.util.stream.IntStream;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class NeuralNetwork implements Serializable {
 	private static final long serialVersionUID = 1L;
-	
+
 	//first dimension is layer, second dimension is neuron # in layer
 	protected double[][] neurons;
 	protected double[][] neuronsRaw;
@@ -23,34 +26,38 @@ public class NeuralNetwork implements Serializable {
 	protected int[] neuronsPerLayer;
 	/* activation choices:
 		- linear
-  		- sigmoid
+		- sigmoid
 		- tanh
 		- relu
-  		- binary
+		- binary
 		- softmax
- 	*/
+	*/
 	protected String[] activations;
 	public int numLayers;
 	//gradient clipping threshold
 	public double clipThreshold = 1;
 	//whether or not to display accuracy while training (for classification models)
 	public boolean displayAccuracy = false;
+
 	// Regularization type
 	public static enum RegularizationType {
 		NONE,
 		L1,
 		L2
 	}
+
 	// Callback interface for training updates
 	public static interface TrainingCallback {
 		void onEpochUpdate(int epoch, int batch, double progress, double accuracy);
 	}
+
 	// Regularization settings (lambda = regularization strength)
-    private double lambda = 0;
-    private RegularizationType regularizationType = RegularizationType.NONE;
+	private double lambda = 0;
+	private RegularizationType regularizationType = RegularizationType.NONE;
 	//used in gradient descent
 	protected double[][] biasGradient;
 	protected double[][][] weightGradient;
+	private Random r;
 
 	//takes in int[] for number of neurons in each layer and string[] for activations of each layer
 	public NeuralNetwork(int[] topology, String[] active) {
@@ -62,9 +69,11 @@ public class NeuralNetwork implements Serializable {
 		biases = new double[numLayers][maxLayerSize];
 		weights = new double[numLayers][maxLayerSize][maxLayerSize];
 		activations = active.clone();
+		r = new Random();
 	}
 
-	public NeuralNetwork(int[] topology, String[] active, RegularizationType regularizationType, double regularizationStrength) {
+	public NeuralNetwork(int[] topology, String[] active, RegularizationType regularizationType,
+			double regularizationStrength) {
 		this(topology, active);
 		//set regularization
 		this.regularizationType = regularizationType;
@@ -72,7 +81,7 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	public NeuralNetwork() {
-		
+
 	}
 
 	//initialize network with random starting values
@@ -102,7 +111,7 @@ public class NeuralNetwork implements Serializable {
 						weights[i][j][k] = r.nextGaussian() * std + mean;
 					}
 				}
-				
+
 			}
 		} else if (initMethod.equals("xavier")) {
 			for (int i = 1; i < numLayers; i++) {
@@ -123,15 +132,15 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	void InitWeights() {
-		for(int i = 1; i < numLayers; i++) {
-			int n = neuronsPerLayer[i-1];
+		for (int i = 1; i < numLayers; i++) {
+			int n = neuronsPerLayer[i - 1];
 			double min, max;
-			if(activations[i].equals("relu")) {
+			if (activations[i].equals("relu")) {
 				//he weight initialization (for relu) (gaussian distribution)
 				Random r = new Random();
 				double mean = 0, std = Math.sqrt(2.0 / n);
-				for(int j = 0; j < neuronsPerLayer[i]; j++) {
-					for(int k = 0; k < neuronsPerLayer[i-1]; k++) {
+				for (int j = 0; j < neuronsPerLayer[i]; j++) {
+					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
 						weights[i][j][k] = r.nextGaussian() * std + mean;
 					}
 				}
@@ -139,8 +148,8 @@ public class NeuralNetwork implements Serializable {
 				//xavier weight initialization (for linear, sigmoid, tanh, etc.) (uniform distribution)
 				max = 1 / Math.sqrt(n);
 				min = -max;
-				for(int j = 0; j < neuronsPerLayer[i]; j++) {
-					for(int k = 0; k < neuronsPerLayer[i-1]; k++) {
+				for (int j = 0; j < neuronsPerLayer[i]; j++) {
+					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
 						weights[i][j][k] = randDouble(min, max);
 					}
 				}
@@ -149,42 +158,69 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	void InitBiases(double spread) {
-		for(int i = 1; i < numLayers; i++) {
-			for(int j = 0; j < neuronsPerLayer[i]; j++) {
+		for (int i = 1; i < numLayers; i++) {
+			for (int j = 0; j < neuronsPerLayer[i]; j++) {
 				biases[i][j] = randDouble(-spread, spread);
 			}
 		}
 	}
 
-	public double[][][] GetWeights() { return weights; }
+	public double[][][] GetWeights() {
+		return weights;
+	}
+
 	public void SetWeight(int layer, int outgoing, int incoming, double value) {
 		weights[layer][outgoing][incoming] = value;
 	}
 
-	public double[][] GetBiases() { return biases; }
-	public void SetBias(int layer, int neuron, double bias) { biases[layer][neuron] = bias; }
+	public double[][] GetBiases() {
+		return biases;
+	}
 
-	public String[] GetActivations() { return activations; }
-	public void SetActivation(int layer, String act) { activations[layer] = act; }
+	public void SetBias(int layer, int neuron, double bias) {
+		biases[layer][neuron] = bias;
+	}
 
-	public double[][] GetNeurons() { return neurons; }
+	public String[] GetActivations() {
+		return activations;
+	}
 
-	public int[] GetTopology() { return neuronsPerLayer; }
+	public void SetActivation(int layer, String act) {
+		activations[layer] = act;
+	}
 
-    public void SetRegularizationType(RegularizationType regularizationType) { this.regularizationType = regularizationType; }
-	public void SetRegularizationLambda(double lambda) { this.lambda = lambda; }
-	public RegularizationType GetRegularizationType() { return regularizationType; }
-	public double GetRegularizationLambda() { return lambda; }
+	public double[][] GetNeurons() {
+		return neurons;
+	}
+
+	public int[] GetTopology() {
+		return neuronsPerLayer;
+	}
+
+	public void SetRegularizationType(RegularizationType regularizationType) {
+		this.regularizationType = regularizationType;
+	}
+
+	public void SetRegularizationLambda(double lambda) {
+		this.lambda = lambda;
+	}
+
+	public RegularizationType GetRegularizationType() {
+		return regularizationType;
+	}
+
+	public double GetRegularizationLambda() {
+		return lambda;
+	}
 
 	double randDouble(double min, double max) {
-		Random r = new Random();
 		return min + (max - min) * r.nextDouble();
 	}
 
 	int max(int[] arr) {
 		int m = -1;
-		for(int i : arr) {
-			if(i > m) {
+		for (int i : arr) {
+			if (i > m) {
 				m = i;
 			}
 		}
@@ -192,35 +228,35 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	// Total regularization term calculation
-    double regularizationTerm() {
-        double regTerm = 0.0;
-        if (regularizationType == RegularizationType.L1) {
-            // L1 regularization
-			for(int i = 1; i < numLayers; i++) {
-				for(int j = 0; j < neuronsPerLayer[i]; j++) {
-					for(int k = 0; k < neuronsPerLayer[i-1]; k++) {
+	double regularizationTerm() {
+		double regTerm = 0.0;
+		if (regularizationType == RegularizationType.L1) {
+			// L1 regularization
+			for (int i = 1; i < numLayers; i++) {
+				for (int j = 0; j < neuronsPerLayer[i]; j++) {
+					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
 						regTerm += Math.abs(weights[i][j][k]);
 					}
 				}
 			}
-        } else if (regularizationType == RegularizationType.L2) {
-            // L2 regularization
-            for(int i = 1; i < numLayers; i++) {
-				for(int j = 0; j < neuronsPerLayer[i]; j++) {
-					for(int k = 0; k < neuronsPerLayer[i-1]; k++) {
-						regTerm += weights[i][j][k]*weights[i][j][k];
+		} else if (regularizationType == RegularizationType.L2) {
+			// L2 regularization
+			for (int i = 1; i < numLayers; i++) {
+				for (int j = 0; j < neuronsPerLayer[i]; j++) {
+					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
+						regTerm += weights[i][j][k] * weights[i][j][k];
 					}
 				}
 			}
-        }
+		}
 		regTerm *= lambda;
-        return regTerm;
+		return regTerm;
 	}
 
 	double linear_activation(double raw) {
 		return raw;
 	}
-	
+
 	double sigmoid_activation(double raw) {
 		return 1d / (1 + Math.exp(-raw));
 	}
@@ -238,7 +274,7 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	double softmax_activation(double raw, double[] neuronValues) {
-    	double maxVal = max(neuronValues);
+		double maxVal = max(neuronValues);
 
 		// Compute the normalization factor (sum of exponentials)
 		double total = 0;
@@ -251,11 +287,11 @@ public class NeuralNetwork implements Serializable {
 
 	double softmax_der(double[] neuronValues, int index) {
 		double softmax = softmax_activation(neuronValues[index], neuronValues);
-        return softmax * (1.0 - softmax);
+		return softmax * (1.0 - softmax);
 	}
 
 	double activate(double raw, int layer) {
-		switch(activations[layer]) {
+		switch (activations[layer]) {
 			case "linear":
 				return linear_activation(raw);
 			case "sigmoid":
@@ -267,7 +303,7 @@ public class NeuralNetwork implements Serializable {
 			case "binary":
 				return binary_activation(raw);
 			case "softmax":
-				return softmax_activation(raw, Arrays.copyOfRange(neurons[layer], 0, neuronsPerLayer[layer]));
+				return softmax_activation(raw, Arrays.copyOfRange(neuronsRaw[layer], 0, neuronsPerLayer[layer]));
 			default:
 				return linear_activation(raw);
 		}
@@ -275,24 +311,24 @@ public class NeuralNetwork implements Serializable {
 
 	double activate_der(double raw, int layer, int index) {
 		double val;
-		switch(activations[layer]) {
+		switch (activations[layer]) {
 			case "linear":
 				return 1;
 			case "sigmoid":
 				double sigmoidVal = sigmoid_activation(raw);
 				val = sigmoidVal * (1 - sigmoidVal);
-				if(Double.isNaN(val)) {
+				if (Double.isNaN(val)) {
 					System.out.println("NaN error in sigmoid activation der");
 				}
 				return val;
 			case "tanh":
 				val = Math.pow(1d / Math.cosh(raw), 2);
-				if(Double.isNaN(val)) {
+				if (Double.isNaN(val)) {
 					System.out.println("NaN error in tanh activation der");
 				}
 				return val;
 			case "relu":
-				if(raw <= 0) {
+				if (raw <= 0) {
 					return 0;
 				} else {
 					return 1;
@@ -301,7 +337,7 @@ public class NeuralNetwork implements Serializable {
 				return 0;
 			case "softmax":
 				val = softmax_der(Arrays.copyOfRange(neuronsRaw[layer], 0, neuronsPerLayer[layer]), index);
-				if(Double.isNaN(val)) {
+				if (Double.isNaN(val)) {
 					System.out.println("NaN error in softmax activation der");
 				}
 				return val;
@@ -311,8 +347,8 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	void ClearNeurons() {
-		for(int i = 0; i < numLayers; i++) {
-			for(int j = 0; j < neurons[i].length; j++) {
+		for (int i = 0; i < numLayers; i++) {
+			for (int j = 0; j < neurons[i].length; j++) {
 				neurons[i][j] = 0;
 				neuronsRaw[i][j] = 0;
 			}
@@ -321,38 +357,35 @@ public class NeuralNetwork implements Serializable {
 
 	public double[] Evaluate(double[] input) {
 		ClearNeurons();
-		//set input neurons
-		for(int i = 0; i < input.length; i++) {
-			neurons[0][i] = input[i];
-		}
 
-		//feed forwards
-		for(int layer = 1; layer < numLayers; layer++) {
-			for(int neuron = 0; neuron < neuronsPerLayer[layer]; neuron++) {
-				double raw = biases[layer][neuron];
-				for(int prevNeuron = 0; prevNeuron < neuronsPerLayer[layer-1]; prevNeuron++) {
-					raw += weights[layer][neuron][prevNeuron] * neurons[layer-1][prevNeuron];
-				}
-				neuronsRaw[layer][neuron] = raw;
-				if(activations[layer].equals("softmax")) {
-					neurons[layer][neuron] = raw;
-				} else {
-					neurons[layer][neuron] = activate(raw, layer);
-				}
-			}
-			if(activations[layer].equals("softmax")) {
-				double[] activatedNeurons = new double[neuronsPerLayer[layer]];
-				for(int i = 0; i < neuronsPerLayer[layer]; i++) {
-					activatedNeurons[i] = activate(neurons[layer][i], layer);
-				}
-				for(int i = 0; i < activatedNeurons.length; i++) {
-					neurons[layer][i] = activatedNeurons[i];
-				}
-			}
-		}
+		// Set input neurons
+        IntStream.range(0, input.length).parallel().forEach(i -> neurons[0][i] = input[i]);
+
+        // Feed forward
+        for (int layer = 1; layer < numLayers; layer++) {
+            final int currentLayer = layer;  // Capture the current value of layer
+            IntStream.range(0, neuronsPerLayer[currentLayer]).parallel().forEach(neuron -> {
+                double raw = biases[currentLayer][neuron];
+                for (int prevNeuron = 0; prevNeuron < neuronsPerLayer[currentLayer - 1]; prevNeuron++) {
+                    raw += weights[currentLayer][neuron][prevNeuron] * neurons[currentLayer - 1][prevNeuron];
+                }
+                neuronsRaw[currentLayer][neuron] = raw;
+                if (activations[currentLayer].equals("softmax")) {
+                    neurons[currentLayer][neuron] = raw;
+                } else {
+                    neurons[currentLayer][neuron] = activate(raw, currentLayer);
+                }
+            });
+
+            if (activations[currentLayer].equals("softmax")) {
+                IntStream.range(0, neuronsPerLayer[currentLayer]).parallel().forEach(i -> {
+                    neurons[currentLayer][i] = activate(neuronsRaw[currentLayer][i], currentLayer);
+                });
+            }
+        }
 
 		//return output layer
-		return Arrays.copyOfRange(neurons[numLayers-1], 0, neuronsPerLayer[numLayers-1]);
+		return Arrays.copyOfRange(neurons[numLayers - 1], 0, neuronsPerLayer[numLayers - 1]);
 	}
 
 	@Override
@@ -361,29 +394,30 @@ public class NeuralNetwork implements Serializable {
 		print += "\nTopology (neurons per layer): " + printArr(neuronsPerLayer);
 		print += "\nActivations (per layer): " + printArr(activations);
 		print += "\nRegularization: " + regularizationType.toString() + " lambda: " + lambda;
-		
+
 		print += "\nBiases:\n";
-		for(int i = 0; i < numLayers; i++) {
-			print += "Layer " + (i+1) + ": " + printArr(Arrays.copyOfRange(biases[i],0,neuronsPerLayer[i])) + "\n";
+		for (int i = 0; i < numLayers; i++) {
+			print += "Layer " + (i + 1) + ": " + printArr(Arrays.copyOfRange(biases[i], 0, neuronsPerLayer[i])) + "\n";
 		}
 
 		print += "\nWeights:\n";
-		for(int i = 1; i < numLayers; i++) {
-			for(int j = 0; j < neuronsPerLayer[i]; j++) {
+		for (int i = 1; i < numLayers; i++) {
+			for (int j = 0; j < neuronsPerLayer[i]; j++) {
 				//each neuron
-				print += "    Neuron " + (j+1) + " of Layer " + (i+1) + " Weights: \n" + printArr(Arrays.copyOfRange(weights[i][j],0,neuronsPerLayer[i-1])) + "\n"; 
+				print += "    Neuron " + (j + 1) + " of Layer " + (i + 1) + " Weights: \n"
+						+ printArr(Arrays.copyOfRange(weights[i][j], 0, neuronsPerLayer[i - 1])) + "\n";
 			}
 		}
 		return print;
 	}
 
 	String printArr(int[] arr) {
-		if(arr == null)
+		if (arr == null)
 			return "[]";
-		if(arr.length == 0)
+		if (arr.length == 0)
 			return "[]";
 		String print = "[";
-		for(int i = 0; i < arr.length - 1; i++) {
+		for (int i = 0; i < arr.length - 1; i++) {
 			print += arr[i] + ", ";
 		}
 		print += arr[arr.length - 1] + "]";
@@ -391,12 +425,12 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	String printArr(double[] arr) {
-		if(arr == null)
+		if (arr == null)
 			return "[]";
-		if(arr.length == 0)
+		if (arr.length == 0)
 			return "[]";
 		String print = "[";
-		for(int i = 0; i < arr.length - 1; i++) {
+		for (int i = 0; i < arr.length - 1; i++) {
 			print += arr[i] + ", ";
 		}
 		print += arr[arr.length - 1] + "]";
@@ -404,12 +438,12 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	String printArr(String[] arr) {
-		if(arr == null)
+		if (arr == null)
 			return "[]";
-		if(arr.length == 0)
+		if (arr.length == 0)
 			return "[]";
 		String print = "[";
-		for(int i = 0; i < arr.length - 1; i++) {
+		for (int i = 0; i < arr.length - 1; i++) {
 			print += arr[i] + ", ";
 		}
 		print += arr[arr.length - 1] + "]";
@@ -447,7 +481,7 @@ public class NeuralNetwork implements Serializable {
 			NeuralNetwork loadedNetwork = (NeuralNetwork) oi.readObject();
 			loadedNetwork.biasGradient = null;
 			loadedNetwork.weightGradient = null;
-				
+
 			oi.close();
 			fi.close();
 
@@ -466,19 +500,19 @@ public class NeuralNetwork implements Serializable {
 	//chance is a number between 0 and 1
 	public void Mutate(double chance, double variation) {
 		//mutate weights
-		for(int i = 0; i < weights.length; i++) {
-			for(int j = 0; j < weights[0].length; j++) {
-				for(int k = 0; k < weights[0][0].length; k++) {
-					if(randDouble(0,1) <= chance) {
+		for (int i = 0; i < weights.length; i++) {
+			for (int j = 0; j < weights[0].length; j++) {
+				for (int k = 0; k < weights[0][0].length; k++) {
+					if (randDouble(0, 1) <= chance) {
 						weights[i][j][k] += randDouble(-variation, variation);
 					}
 				}
 			}
 		}
 		//mutate biases
-		for(int i = 0; i < biases.length; i++) {
-			for(int j = 0; j < biases[0].length; j++) {
-				if(randDouble(0,1) <= chance) {
+		for (int i = 0; i < biases.length; i++) {
+			for (int j = 0; j < biases[0].length; j++) {
+				if (randDouble(0, 1) <= chance) {
 					biases[i][j] += randDouble(-variation, variation);
 				}
 			}
@@ -488,23 +522,23 @@ public class NeuralNetwork implements Serializable {
 	//error functions
 	public double Cost(double[] output, double[] expected, String lossFunction) {
 		double cost = 0;
-		if(output.length != expected.length) {
+		if (output.length != expected.length) {
 			return -1;
 		}
-		if(lossFunction.equals("sse")) {
-			for(int i = 0; i < output.length; i++) {
+		if (lossFunction.equals("sse")) {
+			for (int i = 0; i < output.length; i++) {
 				double neuronCost = 0.5 * Math.pow(expected[i] - output[i], 2);
 				cost += neuronCost;
 			}
-		} else if(lossFunction.equals("mse")) {
+		} else if (lossFunction.equals("mse")) {
 			for (int i = 0; i < output.length; i++) {
 				double neuronCost = Math.pow(expected[i] - output[i], 2);
 				cost += neuronCost;
 			}
 			cost /= output.length;
-		} else if(lossFunction.equals("categorical_crossentropy")) {
-			for(int i = 0; i < output.length; i++) {
-				cost -= expected[i] * Math.log(output[i]+1.0e-15d);
+		} else if (lossFunction.equals("categorical_crossentropy")) {
+			for (int i = 0; i < output.length; i++) {
+				cost -= expected[i] * Math.log(output[i] + 1.0e-15d);
 			}
 		}
 		//add regularization term
@@ -514,21 +548,22 @@ public class NeuralNetwork implements Serializable {
 
 	//error functions derivative
 	double cost_der(double predicted, double expected, String lossFunction) {
-		if(lossFunction.equals("sse")) {
-			if(Double.isNaN(predicted - expected)) {
+		if (lossFunction.equals("sse")) {
+			if (Double.isNaN(predicted - expected)) {
 				System.out.println("NaN error in cost derivative sse");
 			}
 			return predicted - expected;
-		} else if(lossFunction.equals("mse")) {
-			if(Double.isNaN((2.0 * (predicted - expected)) / neuronsPerLayer[numLayers-1])) {
+		} else if (lossFunction.equals("mse")) {
+			if (Double.isNaN((2.0 * (predicted - expected)) / neuronsPerLayer[numLayers - 1])) {
 				System.out.println("NaN error in cost derivative mse");
 			}
-			return (2.0 * (predicted - expected)) / neuronsPerLayer[numLayers-1];
-		} else if(lossFunction.equals("categorical_crossentropy")) {
-			if(Double.isNaN(-expected / (Math.max(predicted, 1.0e-15)))) {
-				System.out.println("NaN error in cost derivative crossentropy: expected: " + expected + " predicted: " + predicted);
+			return (2.0 * (predicted - expected)) / neuronsPerLayer[numLayers - 1];
+		} else if (lossFunction.equals("categorical_crossentropy")) {
+			if (Double.isNaN(-expected / (Math.max(predicted, 1.0e-15)))) {
+				System.out.println("NaN error in cost derivative crossentropy: expected: " + expected + " predicted: "
+						+ predicted);
 			}
-			return -expected / (predicted+1.0e-15);
+			return -expected / (predicted + 1.0e-15);
 		}
 		return 1;
 	}
@@ -537,7 +572,7 @@ public class NeuralNetwork implements Serializable {
 		double[] neuronGradients = new double[neuronsPerLayer[layer]];
 
 		//base case
-		if(layer == numLayers - 1) {
+		if (layer == numLayers - 1) {
 			//last layer (output layer)
 			for (int i = 0; i < neuronsPerLayer[layer]; i++) {
 				if (lossFunction.equals("categorical_crossentropy") && activations[layer].equals("softmax")) {
@@ -547,75 +582,76 @@ public class NeuralNetwork implements Serializable {
 				}
 				neuronGradients[i] = cost_der(predicted[i], expected[i], lossFunction)
 						* activate_der(neuronsRaw[layer][i], layer, i);
-				if(Double.isNaN(neuronGradients[i])) {
+				if (Double.isNaN(neuronGradients[i])) {
 					System.out.println("Nan error in neuron gradient of last layer. try reducing the learning rate");
 					throw new ArithmeticException("NaN error");
 				}
-			}
-			//set weights/biases
-			for(int i = 0; i < neuronsPerLayer[layer]; i++) {
 				biasGradient[layer][i] = 1 * neuronGradients[i];
-				if(Double.isNaN(biasGradient[layer][i])) {
+				if (Double.isNaN(biasGradient[layer][i])) {
 					System.out.println("Nan error in bias of last layer. try reducing the learning rate");
 					throw new ArithmeticException("NaN error");
 				}
-				for(int j = 0; j < neuronsPerLayer[layer-1]; j++) {
+				for (int j = 0; j < neuronsPerLayer[layer - 1]; j++) {
 					weightGradient[layer][i][j] = neuronGradients[i] * neurons[layer - 1][j];
-					if(Double.isNaN(neurons[layer - 1][j])) {
-						System.out.println("Nan error in neuron value of second to last layer. try reducing the learning rate");
+					if (Double.isNaN(neurons[layer - 1][j])) {
+						System.out.println(
+								"Nan error in neuron value of second to last layer. try reducing the learning rate");
 					}
-					if(Double.isNaN(weightGradient[layer][i][j])) {
-						System.out.println("Nan error in weight of last layer. try reducing the learning rate: neuronGradient: " + neuronGradients[i] + " neuron: " + neurons[layer - 1][j] + " cost der: " + cost_der(predicted[i], expected[i], lossFunction) + " activate der: " + activate_der(neuronsRaw[layer][i], layer, i) + " predicted: " + predicted[i] + " expected: " + expected[i]);
+					if (Double.isNaN(weightGradient[layer][i][j])) {
+						System.out.println(
+								"Nan error in weight of last layer. try reducing the learning rate: neuronGradient: "
+										+ neuronGradients[i] + " neuron: " + neurons[layer - 1][j] + " cost der: "
+										+ cost_der(predicted[i], expected[i], lossFunction) + " activate der: "
+										+ activate_der(neuronsRaw[layer][i], layer, i) + " predicted: " + predicted[i]
+										+ " expected: " + expected[i]);
 						throw new ArithmeticException("NaN error");
 					}
-				}	
+				}
 			}
 			return neuronGradients;
 		}
-		
+
 		//recursive case
-		double[] nextLayerBackpropagate = Backpropagate(predicted, expected, layer+1, lossFunction);
+		double[] nextLayerBackpropagate = Backpropagate(predicted, expected, layer + 1, lossFunction);
 		double nextLayerSum = 0;
 		double[] nextLayerWeightedSum = new double[neuronsPerLayer[layer]];
-		for(int i = 0; i < neuronsPerLayer[layer+1]; i++) {
+		for (int i = 0; i < neuronsPerLayer[layer + 1]; i++) {
 			nextLayerSum += nextLayerBackpropagate[i];
 		}
-		for(int i = 0; i < neuronsPerLayer[layer]; i++) {
-			for(int j = 0; j < neuronsPerLayer[layer+1]; j++) {
-				nextLayerWeightedSum[i] += nextLayerBackpropagate[j] * weights[layer+1][j][i];
+		for (int i = 0; i < neuronsPerLayer[layer]; i++) {
+			for (int j = 0; j < neuronsPerLayer[layer + 1]; j++) {
+				nextLayerWeightedSum[i] += nextLayerBackpropagate[j] * weights[layer + 1][j][i];
 			}
-		}
-		//update gradients
-		for(int i = 0; i < neuronsPerLayer[layer]; i++) {
 			neuronGradients[i] = activate_der(neuronsRaw[layer][i], layer, i) * nextLayerWeightedSum[i];
 			biasGradient[layer][i] = 1 * nextLayerSum;
-			if(Double.isNaN(biasGradient[layer][i])) {
+			if (Double.isNaN(biasGradient[layer][i])) {
 				System.out.println("Nan error in bias. try reducing the learning rate");
 				throw new ArithmeticException("NaN error");
 			}
-			for(int j = 0; j < neuronsPerLayer[layer-1]; j++) {
-				weightGradient[layer][i][j] = neuronGradients[i] * neurons[layer-1][j];
-				if(Double.isNaN(weightGradient[layer][i][j])) {
+			for (int j = 0; j < neuronsPerLayer[layer - 1]; j++) {
+				weightGradient[layer][i][j] = neuronGradients[i] * neurons[layer - 1][j];
+				if (Double.isNaN(weightGradient[layer][i][j])) {
 					System.out.println("Nan error in weight. try reducing the learning rate");
 					throw new ArithmeticException("NaN error");
 				}
 			}
 		}
-		
+
 		//return gradients of neurons in layer
 		return neuronGradients;
 	}
 
 	public static double clamp(double value, double min, double max) {
-        return Math.max(min, Math.min(max, value));
-    }
+		return Math.max(min, Math.min(max, value));
+	}
 
 	//uses SGD (stochastic gradient descent)
-	public void Train(double[][] inputs, double[][] outputs, int epochs, double learningRate, int batchSize, String lossFunction, double decay, double momentum, TrainingCallback callback) {
+	public void Train(double[][] inputs, double[][] outputs, int epochs, double learningRate, int batchSize,
+			String lossFunction, double decay, double momentum, TrainingCallback callback) {
 		double lr = learningRate;
 		//list of indices for data points, will be randomized in each epoch
 		List<Integer> indices = new ArrayList<Integer>(inputs.length);
-		for(int i = 0; i < inputs.length; i++) {
+		for (int i = 0; i < inputs.length; i++) {
 			indices.add(i);
 		}
 		//initial shuffle
@@ -626,7 +662,7 @@ public class NeuralNetwork implements Serializable {
 		final double weightedAvg = 1.0 / (double) batchSize;
 		int epoch = 0;
 		double progress = 0; // marks the epoch and progress through current epoch as decimal
-		int batchesPerEpoch = (int)Math.ceil((double)inputs.length / batchSize);
+		int batchesPerEpoch = (int) Math.ceil((double) inputs.length / batchSize);
 		int epochIteration = 0;
 		if (inputs.length % batchSize != 0) {
 			//batches wont divide evenly into samples
@@ -635,68 +671,87 @@ public class NeuralNetwork implements Serializable {
 		//momentum vectors initialized to 0
 		double[][] vBiases = new double[numLayers][biases[0].length];
 		double[][][] vWeights = new double[numLayers][weights[0].length][weights[0][0].length];
-		for(int iteration = 0; epoch < epochs; iteration++) {
+		double[][] avgBiasGradient = new double[numLayers][biases[0].length];
+		double[][][] avgWeightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
+		double avgBatchTime = 0;
+		int iteration = 0;
+		for (; epoch < epochs; iteration++) {
 			//do epoch batch stuff (iteration is the current cumulative batch iteration)
-			progress = (double)iteration*batchSize / inputs.length;
+			progress = epoch + currentInd / (double) inputs.length;
 			epochIteration = iteration % batchesPerEpoch;
-			epoch = (int)Math.floor(progress);
 
 			//do exponential learning rate decay
-			lr = (1.0/(1.0+decay*epoch))*learningRate;
-			
-			//choose random case
-			if(batchSize == -1) {
+			lr = (1.0 / (1.0 + decay * epoch)) * learningRate;
+
+			if (batchSize == -1) {
 				batchSize = inputs.length;
 			}
-			double numCorrect = 0;
-			int caseInd = 0;
-			//System.out.println("weighted avg " + weightedAvg);
-			double[][] avgBiasGradient = new double[numLayers][biases[0].length];
-			double[][][] avgWeightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
-			for(int a = 0; a < batchSize; a++) {
-				//find current random data point
-				if(currentInd >= indices.size()) {
-					currentInd = 0;
-					//finished epoch, start new epoch by reshuffling
-					Collections.shuffle(indices);
+
+			ArrayList<Integer> batchIndices = new ArrayList<Integer>(batchSize);
+			for (int i = 0; i < batchSize; i++) {
+				int index = (currentInd + i) % inputs.length;
+				batchIndices.add(indices.get(index));
+			}
+
+			//int numCorrect = 0;
+			AtomicInteger numCorrect = new AtomicInteger(0);
+			if (iteration > 0) {
+				//not first iteration, reset gradients
+				for (double[] subarray : avgBiasGradient) {
+					Arrays.fill(subarray, 0);
 				}
-				caseInd = indices.get(currentInd);
-				currentInd++;
-				
-				//calculate predicted output
+				for (double[][] subarray : avgWeightGradient) {
+					for (double[] subarray2 : subarray) {
+						Arrays.fill(subarray2, 0);
+					}
+				}
+			}
+			biasGradient = new double[numLayers][neurons[0].length];
+			weightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
+			double startTime = System.nanoTime();
+
+			// Parallelize this loop
+			batchIndices.stream().parallel().forEach(a -> {
+				int caseInd = a;
+
+				// Calculate predicted output
 				double[] predicted = Evaluate(inputs[caseInd]);
 
-				//if this is a classification network, count the number correct
-				if(displayAccuracy) {
+				// If this is a classification network, count the number correct
+				if (displayAccuracy) {
 					int prediction = indexOf(predicted, max(predicted));
 					int actual = indexOf(outputs[caseInd], max(outputs[caseInd]));
-					if(prediction == actual) {
-						numCorrect++;
+					if (prediction == actual) {
+						numCorrect.incrementAndGet();
 					}
 				}
 
-				biasGradient = new double[numLayers][neurons[0].length];
-				weightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
-				//do backpropagation
+				// Do backpropagation
 				Backpropagate(predicted, outputs[caseInd], 1, lossFunction);
-				//do weighted sum of gradients for average
-				for(int i = 0; i < numLayers; i++)  {
-					for(int j = 0; j < biases[0].length; j++) {
-						avgBiasGradient[i][j] += biasGradient[i][j] * weightedAvg;
-					}
-				}
-				for(int i = 0; i < numLayers; i++)  {
-					for(int j = 0; j < weights[0].length; j++) {
-						for(int k = 0; k < weights[0][0].length; k++) {
-							avgWeightGradient[i][j][k] += weightGradient[i][j][k] * weightedAvg;
+
+				// Do weighted sum of gradients for average
+				synchronized (avgBiasGradient) {
+					for (int i = 0; i < numLayers; i++) {
+						for (int j = 0; j < biases[0].length; j++) {
+							avgBiasGradient[i][j] += biasGradient[i][j] * weightedAvg;
 						}
 					}
 				}
-			}
+
+				synchronized (avgWeightGradient) {
+					for (int i = 0; i < numLayers; i++) {
+						for (int j = 0; j < weights[0].length; j++) {
+							for (int k = 0; k < weights[0][0].length; k++) {
+								avgWeightGradient[i][j][k] += weightGradient[i][j][k] * weightedAvg;
+							}
+						}
+					}
+				}
+			});
 
 			//use average gradients to find new parameters
-			for(int i = 0; i < numLayers; i++) {
-				for(int j = 0; j < neuronsPerLayer[i]; j++) {
+			for (int i = 0; i < numLayers; i++) {
+				for (int j = 0; j < neuronsPerLayer[i]; j++) {
 					avgBiasGradient[i][j] = clamp(avgBiasGradient[i][j], -clipThreshold, clipThreshold);
 					//do momentum
 					vBiases[i][j] = momentum * vBiases[i][j] - avgBiasGradient[i][j] * lr;
@@ -704,9 +759,9 @@ public class NeuralNetwork implements Serializable {
 					biases[i][j] = biases[i][j] + vBiases[i][j];
 				}
 			}
-			for(int i = 1; i < numLayers; i++) {
-				for(int j = 0; j < neuronsPerLayer[i]; j++) {
-					for(int k = 0; k < neuronsPerLayer[i-1]; k++) {
+			for (int i = 1; i < numLayers; i++) {
+				for (int j = 0; j < neuronsPerLayer[i]; j++) {
+					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
 						avgWeightGradient[i][j][k] = clamp(avgWeightGradient[i][j][k], -clipThreshold, clipThreshold);
 						// apply regularization gradient
 						if (regularizationType == RegularizationType.L1) {
@@ -721,36 +776,51 @@ public class NeuralNetwork implements Serializable {
 					}
 				}
 			}
-			if(displayAccuracy) {
-				double accuracy = 100*((double) numCorrect * weightedAvg);
+			double endTime = System.nanoTime();
+			double batchTime = (endTime - startTime) / 1e9;
+			avgBatchTime += batchTime;
+			if (displayAccuracy) {
+				double accuracy = 100 * ((double) numCorrect.get() * weightedAvg);
 				//round to one decimal
 				accuracy = Math.round(accuracy * 100.0) / 100.0;
 				if (callback != null) {
 					callback.onEpochUpdate(epoch + 1, epochIteration + 1, progress, accuracy);
 				}
-				progressBar(30, "Training", epoch+1, epochs, (epochIteration+1) + "/" + batchesPerEpoch + " accuracy: "+accuracy+"%");
+				progressBar(30, "Training", epoch + 1, epochs,
+						(epochIteration + 1) + "/" + batchesPerEpoch + " accuracy: " + accuracy + "%");
 			} else {
-				progressBar(30, "Training", epoch+1, epochs, (epochIteration+1) + "/" + batchesPerEpoch);
+				progressBar(30, "Training", epoch + 1, epochs, (epochIteration + 1) + "/" + batchesPerEpoch);
+			}
+			currentInd += batchSize;
+			if (currentInd >= inputs.length) {
+				//new epoch
+				currentInd = 0;
+				epoch++;
+				Collections.shuffle(indices);
 			}
 		}
+		avgBatchTime /= (iteration + 1);
+		System.out.println();
+		System.out.println("Average batch time: " + avgBatchTime + " seconds");
 	}
 
 	void progressBar(int width, String title, int current, int total, String subtitle) {
 		String filled = "█";
 		String unfilled = "░";
 		double fill = (double) current / total;
-		if(fill >= 0 && fill <= 1) {
+		if (fill >= 0 && fill <= 1) {
 			//set progress bar
-			int fillAmount = (int)Math.ceil(fill * width);
-			String bar = title + ": " + filled.repeat(fillAmount) + unfilled.repeat(width - fillAmount) + " " + current + "/" + total + " " + subtitle + " " + "\r";
-			System.out.print(bar);
-		 }
-	} 
+			int fillAmount = (int) Math.ceil(fill * width);
+			StringBuilder bar = new StringBuilder();
+			bar.append(title).append(": ").append(filled.repeat(fillAmount)).append(unfilled.repeat(width - fillAmount)).append(" ").append(current).append("/").append(total).append(" ").append(subtitle).append(" ").append("\r");
+			System.out.print(bar.toString());
+		}
+	}
 
 	double max(double[] arr) {
 		double m = -1;
-		for(double i : arr) {
-			if(i > m) {
+		for (double i : arr) {
+			if (i > m) {
 				m = i;
 			}
 		}
@@ -759,8 +829,8 @@ public class NeuralNetwork implements Serializable {
 
 	int indexOf(double[] arr, double v) {
 		int index = -1;
-		for(int i = 0; i < arr.length; i++) {
-			if(arr[i] == v) {
+		for (int i = 0; i < arr.length; i++) {
+			if (arr[i] == v) {
 				index = i;
 				return index;
 			}
