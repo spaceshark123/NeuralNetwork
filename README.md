@@ -26,6 +26,8 @@ Neural networks are a fundamental building block of modern machine learning and 
   
 - **Multiple Activation Functions**: Supports popular activation functions including linear, sigmoid, tanh, relu, binary, and softmax.
 
+- **Multiple Loss Functions**:  Supports major loss/error functions: Mean Squared Error, Sum Squared Error, and Categorical Cross-Entropy.
+
 - **Weight Initialization**: Utilizes weight initialization techniques like Xavier (for linear, sigmoid, and tanh) and He (for relu) for better convergence.
 
 - **Training with SGD**: Train your neural network using Stochastic Gradient Descent (SGD) with customizable learning rate, mini-batch size, and decay.
@@ -34,7 +36,7 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 - **Regularization Techniques**: Supports popular regularization techniques like L1 and L2 to reduce overfitting by minimizing parameter complexity.
 
-- **Momentum** Uses momentum-based gradient descent to accelerate convergence and dampen oscillation.
+- **Momentum**: Uses momentum-based gradient descent to accelerate convergence and dampen oscillation.
 
 - **Save and Load Models**: Easily save trained models to disk and load them for future use.
 
@@ -59,13 +61,13 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
    int epochs = 100;
    double learningRate = 0.01;
    int batchSize = 32;
-   String lossFunction = "mse"; // or "categorical_crossentropy" for classification
+   String lossFunction = "mse"; // or "sse" or "categorical_crossentropy"
    double decay = 0.1; // Learning rate decay
    double momentum = 0.9;
    network.clipThreshold = 1; //default gradient clipping threshold
    //set regularization of network
    network.SetRegularizationType(NeuralNetwork.RegularizationType.L2); 
-   network.SetRegularizationLambda(0.01);
+   network.SetRegularizationLambda(0.001);
    //train the network with no callback
    network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, momentum, null);
    ```
@@ -84,7 +86,7 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
 		public static void main(String[] args) {
 			...
 			Callback callback = new Callback();
-			network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, callback);
+			network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, momentum, callback);
 		}
 	}
 	```
@@ -98,11 +100,11 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
 5. **Evaluation**: Use the trained model to make predictions and evaluate the cost
 
 	  ```java
-	 double[] input = // Your input data
+	 double[] input = {...};
 	 double[] prediction = network.Evaluate(input);
 		
 	 double[] expected = {...};
-	 String lossFunction = "mse"; // or "categorical_crossentropy" for classification
+	 String lossFunction = "mse"; // or "sse" or "categorical_crossentropy"
 	 double cost = network.Cost(prediction, expected, lossFunction);
 	  ```
 

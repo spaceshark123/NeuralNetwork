@@ -276,9 +276,9 @@ class Main {
 								Output("the mnist dataset has not yet been initialized. run 'mnist'");
 								continue;
 							} else {
-								if(!(s[4].equals("mse") || s[4].equals("categorical_crossentropy"))) {
+								if(!(s[4].equals("mse") || s[4].equals("categorical_crossentropy") || s[4].equals("cce") || s[4].equals("sse"))) {
 									//invalid loss function
-									Output("invalid loss function. choices are:\n    - mse\n    - categorical_crossentropy");
+									Output("invalid loss function. choices are:\n    - mse\n    - sse\n    - categorical_crossentropy");
 									continue;
 								}
 
@@ -297,15 +297,17 @@ class Main {
 									clipThreshold = Double.parseDouble(s[7]);
 								}
 								nn.clipThreshold = clipThreshold;
-								double momentum = 0.9;
+								double momentum = 0.1;
 								if(s.length >= 9) {
 									momentum = Double.parseDouble(s[8]);
 								}
 								//since mnist is a classification model, display accuracy as we go
 								nn.displayAccuracy = true;
+								String lossFunction = s[4];
+								lossFunction = lossFunction.equals("cce") ? "categorical_crossentropy" : lossFunction;
 								int epochs = Integer.parseInt(s[2]);
 								ChartUpdater chartUpdater = new ChartUpdater(epochs);
-								nn.Train(mnistImages, mnistOutputs, epochs, Double.parseDouble(s[3]), batchSize, s[4], decay, momentum, chartUpdater);
+								nn.Train(mnistImages, mnistOutputs, epochs, Double.parseDouble(s[3]), batchSize, lossFunction, decay, momentum, chartUpdater);
 								System.out.println();
 							}
 						} else {
@@ -324,9 +326,9 @@ class Main {
 								Output("input/output sizes dont match the network");
 								continue;
 							}
-							if(!(s[4].equals("mse") || s[4].equals("categorical_crossentropy"))) {
+							if(!(s[4].equals("mse") || s[4].equals("categorical_crossentropy") || s[4].equals("cce") || s[4].equals("sse"))) {
 								//invalid loss function
-								Output("invalid loss function. choices are:\n    - mse\n    - categorical_crossentropy");
+								Output("invalid loss function. choices are:\n    - mse\n    - sse\n    - categorical_crossentropy");
 								continue;
 							}
 							//parse inputs and outputs
@@ -361,12 +363,14 @@ class Main {
 								clipThreshold = Double.parseDouble(s[7]);
 							}
 							nn.clipThreshold = clipThreshold;
-							double momentum = 0.9;
+							double momentum = 0.1;
 							if(s.length >= 9) {
 								momentum = Double.parseDouble(s[8]);
 							}
 							nn.displayAccuracy = false;
-							nn.Train(inputs, outputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, s[4], decay, momentum, null);
+							String lossFunction = s[4];
+							lossFunction = lossFunction.equals("cce") ? "categorical_crossentropy" : lossFunction;
+							nn.Train(inputs, outputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, lossFunction, decay, momentum, null);
 							System.out.println();
 						}
 					} catch(FileNotFoundException e) {
@@ -379,7 +383,7 @@ class Main {
 					}
 				} else if(s[0].equals("cost")) {
 					if(s.length < 2) {
-						Output("please specify a path to the test data and a training function:\n    - mse\n    - categorical_crossentropy");
+						Output("please specify a path to the test data and a training function:\n    - mse\n    - sse\n    - categorical_crossentropy");
 						continue;
 					}
 					if(s[1].equals("mnist")) {
@@ -411,7 +415,7 @@ class Main {
 					}
 					try {
 						if(s.length < 3) {
-							Output("please specify a path to the test data and a training function:\n    - mse\n    - categorical_crossentropy");
+							Output("please specify a path to the test data and a training function:\n    - mse\n    - sse\n    - categorical_crossentropy");
 							continue;
 						}
 						File f = new File(s[1]);
@@ -551,9 +555,9 @@ class Main {
 						} else if(s[1].equals("mutate")) {
 							Output("syntax: mutate [mutation chance decimal] [variation]\nmutates neural network to simulate evolution. useful for genetic algorithms");
 						} else if(s[1].equals("train")) {
-							Output("syntax: train [training data file path/'mnist'] [epochs] [learning rate] [loss function] [optional: batch size, default=input size] [optional: decay rate, default=0] [optional: clip threshold, default=1] [optional: momentum, default=0.9]\ntrains neural network on specified training data or mnist dataset based on specified hyperparameters. loss function choices are\n    - mse\n    - categorical_crossentropy\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
+							Output("syntax: train [training data file path/'mnist'] [epochs] [learning rate] [loss function] [optional: batch size, default=input size] [optional: decay rate, default=0] [optional: clip threshold, default=1] [optional: momentum, default=0.1]\ntrains neural network on specified training data or mnist dataset based on specified hyperparameters. loss function choices are\n    - mse\n    - sse\n    - categorical_crossentropy\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("cost")) {
-							Output("syntax: cost [test data file path] [loss function] or cost mnist\nreturns the average cost of the neural network for the specified dataset or the accuracy percentage for the mnist dataset. loss function choices are\n    - mse\n    - categorical_crossentropy\ntest data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
+							Output("syntax: cost [test data file path] [loss function] or cost mnist\nreturns the average cost of the neural network for the specified dataset or the accuracy percentage for the mnist dataset. loss function choices are\n    - mse\n    - sse\n    - categorical_crossentropy\ntest data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("help")) {
 							Output("syntax: help [optional: command name]\nhelp command");
 						} else if(s[1].equals("mnist")) {

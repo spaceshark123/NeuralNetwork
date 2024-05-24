@@ -485,19 +485,23 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
-	//MSE (mean squared error) cost: 0.5(p[i] - e[i])^2
+	//error functions
 	public double Cost(double[] output, double[] expected, String lossFunction) {
 		double cost = 0;
 		if(output.length != expected.length) {
 			return -1;
 		}
-		if(lossFunction.equals("mse")) {
+		if(lossFunction.equals("sse")) {
 			for(int i = 0; i < output.length; i++) {
-				//System.out.println("neuron " + i + " output: " + output[i] + " expected: " + expected[i]);
 				double neuronCost = 0.5 * Math.pow(expected[i] - output[i], 2);
-				//System.out.println("neuron " + i + " + cost is " + neuronCost);
 				cost += neuronCost;
 			}
+		} else if(lossFunction.equals("mse")) {
+			for (int i = 0; i < output.length; i++) {
+				double neuronCost = Math.pow(expected[i] - output[i], 2);
+				cost += neuronCost;
+			}
+			cost /= output.length;
 		} else if(lossFunction.equals("categorical_crossentropy")) {
 			for(int i = 0; i < output.length; i++) {
 				cost -= expected[i] * Math.log(output[i]+1.0e-15d);
@@ -508,13 +512,18 @@ public class NeuralNetwork implements Serializable {
 		return cost;
 	}
 
-	//MSE derivative: (p[i] - e[i])
+	//error functions derivative
 	double cost_der(double predicted, double expected, String lossFunction) {
-		if(lossFunction.equals("mse")) {
+		if(lossFunction.equals("sse")) {
 			if(Double.isNaN(predicted - expected)) {
-				System.out.println("NaN error in cost derivative mse");
+				System.out.println("NaN error in cost derivative sse");
 			}
 			return predicted - expected;
+		} else if(lossFunction.equals("mse")) {
+			if(Double.isNaN((2.0 * (predicted - expected)) / neuronsPerLayer[numLayers-1])) {
+				System.out.println("NaN error in cost derivative mse");
+			}
+			return (2.0 * (predicted - expected)) / neuronsPerLayer[numLayers-1];
 		} else if(lossFunction.equals("categorical_crossentropy")) {
 			if(Double.isNaN(-expected / (Math.max(predicted, 1.0e-15)))) {
 				System.out.println("NaN error in cost derivative crossentropy: expected: " + expected + " predicted: " + predicted);
@@ -536,19 +545,27 @@ public class NeuralNetwork implements Serializable {
 					neuronGradients[i] = predicted[i] - expected[i];
 					continue;
 				}
-				neuronGradients[i] = cost_der(predicted[i], expected[i], lossFunction) * activate_der(neuronsRaw[layer][i], layer, i);
+				neuronGradients[i] = cost_der(predicted[i], expected[i], lossFunction)
+						* activate_der(neuronsRaw[layer][i], layer, i);
+				if(Double.isNaN(neuronGradients[i])) {
+					System.out.println("Nan error in neuron gradient of last layer. try reducing the learning rate");
+					throw new ArithmeticException("NaN error");
+				}
 			}
 			//set weights/biases
 			for(int i = 0; i < neuronsPerLayer[layer]; i++) {
 				biasGradient[layer][i] = 1 * neuronGradients[i];
 				if(Double.isNaN(biasGradient[layer][i])) {
-					System.out.println("Nan error in bias of first layer. try reducing the learning rate");
+					System.out.println("Nan error in bias of last layer. try reducing the learning rate");
 					throw new ArithmeticException("NaN error");
 				}
 				for(int j = 0; j < neuronsPerLayer[layer-1]; j++) {
-					weightGradient[layer][i][j] = neuronGradients[i] * neurons[layer-1][j];
+					weightGradient[layer][i][j] = neuronGradients[i] * neurons[layer - 1][j];
+					if(Double.isNaN(neurons[layer - 1][j])) {
+						System.out.println("Nan error in neuron value of second to last layer. try reducing the learning rate");
+					}
 					if(Double.isNaN(weightGradient[layer][i][j])) {
-						System.out.println("Nan error in weight of first layer. try reducing the learning rate");
+						System.out.println("Nan error in weight of last layer. try reducing the learning rate: neuronGradient: " + neuronGradients[i] + " neuron: " + neurons[layer - 1][j] + " cost der: " + cost_der(predicted[i], expected[i], lossFunction) + " activate der: " + activate_der(neuronsRaw[layer][i], layer, i) + " predicted: " + predicted[i] + " expected: " + expected[i]);
 						throw new ArithmeticException("NaN error");
 					}
 				}	
