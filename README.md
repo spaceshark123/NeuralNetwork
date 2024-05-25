@@ -149,25 +149,38 @@ To use this neural network implementation, you can interact with a custom consol
 
 1. **Compile the Code**: First, make sure you are working in the project directory. If you are running the full project with the console interface, run the following commands to compile and run the program:
 
-	***Compile***:
+	***Unix (Mac/Linux) users***:
+
+	__Compile__:
 
    ```shell
    javac -cp ".:./libraries/jfreechart-1.5.3.jar" Main.java
 	```
-	***Run***
-
+	__Run__:
 	```shell
 	java -cp ".:./libraries/jfreechart-1.5.3.jar" Main
 	```
 
+	***Windows users***:
+
+	__Compile__:
+
+   ```shell
+   javac -cp ".;./libraries/jfreechart-1.5.3.jar" Main.java
+	```
+	__Run__:
+	```shell
+	java -cp ".;./libraries/jfreechart-1.5.3.jar" Main
+	```
+
 	Or, if you are just using the `NeuralNetwork` class, the jfreechart library can be excluded, simplifying the commands to:
 
-	***Compile***:
+	__Compile__:
 
    ```shell
    javac Main.java
 	```
-	***Run***
+	__Run__:
 
 	```shell
 	java Main
@@ -246,7 +259,7 @@ A few neural networks and their training sets have been pre-included into the pr
 - `SavedNetwork1`: simple neural network to add 2 numbers
 - `SavedNetwork2`: deep neural network to add 2 numbers
 - `TrainSet1`: training/test dataset for adding 2 numbers (can be used for `SavedNetwork1` and `SavedNetwork2`)
-- `MNISTNetwork`: an untrained neural network with the correct topology to evaluate MNIST cases (digit recognition). accuracy ≈ 10%
-- `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition). accuracy ≈ 99%
+- `MNISTNetwork`: an untrained neural network with the correct topology to evaluate MNIST cases (digit recognition). accuracy ≈ 10.61%
+- `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition). accuracy ≈ 99.43%
 
 
