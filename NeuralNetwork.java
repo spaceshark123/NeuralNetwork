@@ -488,25 +488,24 @@ public class NeuralNetwork implements Serializable {
 
 	@Override
 	public String toString() {
-		String print = "Neural Network \n";
-		print += "\nTopology (neurons per layer): " + printArr(neuronsPerLayer);
-		print += "\nActivations (per layer): " + printArr(activations);
-		print += "\nRegularization: " + regularizationType.toString() + " lambda: " + lambda;
+		StringBuilder print = new StringBuilder().append("Neural Network \n");
+		print.append("\nTopology (neurons per layer): ").append(printArr(neuronsPerLayer));
+		print.append("\nActivations (per layer): ").append(printArr(activations));
+		print.append("\nRegularization: ").append(regularizationType.toString()).append(" lambda: ").append(lambda);
 
-		print += "\nBiases:\n";
+		print.append("\nBiases:\n");
 		for (int i = 0; i < numLayers; i++) {
-			print += "Layer " + (i + 1) + ": " + printArr(Arrays.copyOfRange(biases[i], 0, neuronsPerLayer[i])) + "\n";
+			print.append("Layer ").append((i + 1)).append(": ").append(printArr(Arrays.copyOfRange(biases[i], 0, neuronsPerLayer[i]))).append("\n");
 		}
 
-		print += "\nWeights:\n";
+		print.append("\nWeights:\n");
 		for (int i = 1; i < numLayers; i++) {
 			for (int j = 0; j < neuronsPerLayer[i]; j++) {
 				//each neuron
-				print += "    Neuron " + (j + 1) + " of Layer " + (i + 1) + " Weights: \n"
-						+ printArr(Arrays.copyOfRange(weights[i][j], 0, neuronsPerLayer[i - 1])) + "\n";
+				print.append("    Neuron ").append((j + 1)).append(" of Layer ").append((i + 1)).append(" Weights: \n").append(printArr(Arrays.copyOfRange(weights[i][j], 0, neuronsPerLayer[i - 1]))).append("\n");
 			}
 		}
-		return print;
+		return print.toString();
 	}
 
 	String printArr(int[] arr) {
@@ -514,12 +513,12 @@ public class NeuralNetwork implements Serializable {
 			return "[]";
 		if (arr.length == 0)
 			return "[]";
-		String print = "[";
+		StringBuilder print = new StringBuilder().append("[");
 		for (int i = 0; i < arr.length - 1; i++) {
-			print += arr[i] + ", ";
+			print.append(arr[i]).append(", ");
 		}
-		print += arr[arr.length - 1] + "]";
-		return print;
+		print.append(arr[arr.length - 1]).append("]");
+		return print.toString();
 	}
 
 	String printArr(double[] arr) {
@@ -540,12 +539,12 @@ public class NeuralNetwork implements Serializable {
 			return "[]";
 		if (arr.length == 0)
 			return "[]";
-		String print = "[";
+		StringBuilder print = new StringBuilder().append("[");
 		for (int i = 0; i < arr.length - 1; i++) {
-			print += arr[i] + ", ";
+			print.append(arr[i]).append(", ");
 		}
-		print += arr[arr.length - 1] + "]";
-		return print;
+		print.append(arr[arr.length - 1]).append("]");
+		return print.toString();
 	}
 
 	public static void Save(NeuralNetwork network, String path) {
@@ -838,8 +837,7 @@ public class NeuralNetwork implements Serializable {
 					}
 				}
 			}
-			double startTime = System.nanoTime();
-			int[] count = new int[2];
+			long startTime = System.currentTimeMillis();
 
 			// Parallelize this loop
 			IntStream.range(0, batchSize).parallel().forEach(a -> {
@@ -878,7 +876,6 @@ public class NeuralNetwork implements Serializable {
 						outputs[caseInd], 1, lossFunction);
 
 				// Do weighted sum of gradients for average
-				//synchronized (avgBiasGradient) {
 				for (int i = 0; i < numLayers; i++) {
 					for (int j = 0; j < biases[0].length; j++) {
 						avgBiasGradient[i][j] += thisBiasGradient[i][j] * weightedAvg;
@@ -887,10 +884,7 @@ public class NeuralNetwork implements Serializable {
 						}
 					}
 				}
-				count[0]++;
-				//}
 			});
-			System.out.println(count[0]);
 
 			//use average gradients to find new parameters
 			for (int i = 1; i < numLayers; i++) {
@@ -915,8 +909,8 @@ public class NeuralNetwork implements Serializable {
 					}
 				}
 			}
-			double endTime = System.nanoTime();
-			double batchTime = (endTime - startTime) / 1e9;
+			long endTime = System.currentTimeMillis();
+			double batchTime = (double)((endTime - startTime) / 1000.0);
 			avgBatchTime += batchTime;
 			currentInd += batchSize;
 			if (currentInd >= inputs.length) {
@@ -943,7 +937,7 @@ public class NeuralNetwork implements Serializable {
 		}
 		avgBatchTime /= (iteration + 1);
 		System.out.println();
-		System.out.println("Average batch time: " + avgBatchTime + " seconds");
+		System.out.println("average batch time: " + avgBatchTime + " seconds");
 	}
 
 	void progressBar(int width, String title, int current, int total, String subtitle) {
