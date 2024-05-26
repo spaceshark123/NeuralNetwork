@@ -21,23 +21,53 @@ class Main {
 			try {
 				if(s[0].equals("load")) {
 					if(s.length > 1) {
-						//path argument is included
-						Output("loading...");
-						nn = NeuralNetwork.Load(s[1]);
+						if (s.length > 2) {
+							if (s[2].equals("object")) {
+								//object mode
+								Output("loading...");
+								nn = NeuralNetwork.Load(s[1]);
+								continue;
+							} else if (s[2].equals("parameters")) {
+								//parameter mode
+								Output("loading...");
+								nn = NeuralNetwork.LoadParameters(s[1]);
+								continue;
+							} else {
+								//object or parameter mode not specified
+								Output("please specify a valid mode: 'object' or 'parameters'");
+								continue;
+							}
+						} else {
+							//object or parameter mode not specified
+							Output("please specify a mode: 'object' or 'parameters'");
+						}
 					} else {
-						//use default path
-						//nn = NeuralNetwork.Load(path);
-						Output("please specify a path.");
+						Output("please specify a path and mode: 'object' or 'parameters'");
 					} 
 				} else if(s[0].equals("save")) {
-					if(s.length > 1) {
-						Output("saving...");
-						//path argument is included
-						NeuralNetwork.Save(nn, s[1]);
+					if (s.length > 1) {
+						if (s.length > 2) {
+							if (s[2].equals("object")) {
+								//object mode
+								Output("saving...");
+								NeuralNetwork.Save(nn, s[1]);
+								continue;
+							} else if (s[2].equals("parameters")) {
+								//parameter mode
+								Output("saving...");
+								NeuralNetwork.SaveParameters(nn, s[1]);
+								continue;
+							} else {
+								//object or parameter mode not specified
+								Output("please specify a valid mode: 'object' or 'parameters'");
+								continue;
+							}
+						} else {
+							//object or parameter mode not specified
+							Output("please specify a mode: 'object' or 'parameters'");
+						}
 					} else {
-						//use default path
-						//NeuralNetwork.Save(nn, path);
-						Output("please specify a path.");
+						Output("please specify a path and mode: 'object' or 'parameters'");
 					}
 				} else if(s[0].equals("exit")) {
 					Output("exiting...");
@@ -531,9 +561,9 @@ class Main {
 						Output("type help [command name] to get detailed usage info \ncommands: \n    - save\n    - load\n    - create\n    - init\n    - reset\n    - info\n    - evaluate\n    - exit\n    - modify\n    - regularization\n    - mutate\n    - train\n    - cost\n    - mnist\n    - magnitude\n    - help");
 					} else {
 						if(s[1].equals("save")) {
-							Output("syntax: save [path]\nsaves the current neural network to the specified file path");
+							Output("syntax: save [path] [object/parameters]\nsaves the current neural network to the specified file path as a java object or as a text file with parameters. text files are human readable and contain biases and activations for the input layer even though they are not used. the weights are saved as a 3D array with the first dimension being the layer (excluding the input layer), the second dimension being the neuron, and the third dimension being the incoming neuron from the previous layer");
 						} else if(s[1].equals("load")) {
-							Output("syntax: load [path]\nloads a saved neural network from the specified path");
+							Output("syntax: load [path] [object/parameters]\nloads a saved neural network from the specified path formatted as a java object or as a text file with parameters. text files are human readable and contain biases and activations for the input layer even though they are not used. the weights are saved as a 3D array with the first dimension being the layer (excluding the input layer), the second dimension being the neuron, and the third dimension being the incoming neuron from the previous layer");
 						} else if(s[1].equals("create")) {
 							Output("syntax: create\ncreates a custom neural network with specified properties");
 						} else if(s[1].equals("init")) {

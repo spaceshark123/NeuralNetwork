@@ -1,3 +1,4 @@
+import java.io.BufferedWriter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -10,6 +11,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.Collections;
+import java.io.FileWriter;
+import java.io.BufferedReader;
+import java.io.FileReader;
 
 import java.util.stream.IntStream;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,8 +56,8 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	// Regularization settings (lambda = regularization strength)
-	private double lambda = 0;
-	private RegularizationType regularizationType = RegularizationType.NONE;
+	protected double lambda = 0;
+	protected RegularizationType regularizationType = RegularizationType.NONE;
 	//used in gradient descent
 	volatile private double[][] avgBiasGradient;
 	volatile private double[][][] avgWeightGradient;
@@ -547,6 +551,8 @@ public class NeuralNetwork implements Serializable {
 		return print.toString();
 	}
 
+	// save the neural network to a file directly as a java object
+	// not transferable between different programming languages and not human readable
 	public static void Save(NeuralNetwork network, String path) {
 		try {
 			FileOutputStream f = new FileOutputStream(path);
@@ -567,6 +573,56 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
+	// save the neural network to a file as a plain text file
+	// transferable between different programming languages and human readable
+	public static void SaveParameters(NeuralNetwork network, String path) {
+		BufferedWriter writer = null;
+		try {
+			FileWriter fWriter = new FileWriter(path);
+			writer = new BufferedWriter(fWriter);
+			StringBuilder print = new StringBuilder();
+			//write parameters to print
+			print.append("numlayers ").append(network.numLayers).append("\n");
+			print.append("topology ");
+			for (int i = 0; i < network.neuronsPerLayer.length; i++) {
+				print.append(network.neuronsPerLayer[i]).append(" ");
+			}
+			print.append("\nactivations ");
+			for (int i = 0; i < network.activations.length; i++) {
+				print.append(network.activations[i]).append(" ");
+			}
+			print.append("\nregularization ").append(network.regularizationType.toString()).append(" ")
+					.append(network.lambda).append("\n");
+			print.append("biases ");
+			for (int i = 0; i < network.biases.length; i++) {
+				for (int j = 0; j < network.neuronsPerLayer[i]; j++) {
+					print.append(network.biases[i][j]).append(" ");
+				}
+			}
+			//weights start at layer 1 because layer 0 is the input layer
+			print.append("\nweights ");
+			for (int i = 1; i < network.weights.length; i++) {
+				for (int j = 0; j < network.neuronsPerLayer[i]; j++) {
+					for (int k = 0; k < network.neuronsPerLayer[i - 1]; k++) {
+						print.append(network.weights[i][j][k]).append(" ");
+					}
+				}
+			}
+			//write to file
+			writer.write(print.toString());
+			writer.close();
+		} catch (FileNotFoundException e) {
+			System.out.println("File not found");
+		} catch (IOException e) {
+			System.out.println("Error initializing stream");
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	// load a neural network from a file that was saved directly as a java object
+	// not transferable between different programming languages
 	public static NeuralNetwork Load(String path) {
 		try {
 			FileInputStream fi = new FileInputStream(path);
@@ -585,6 +641,87 @@ public class NeuralNetwork implements Serializable {
 			System.out.println("Error initializing stream");
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	// load a neural network from a file that was saved as a plain text file
+	// transferable between different programming languages
+	public static NeuralNetwork LoadParameters(String path) {
+		try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
+			String line;
+			NeuralNetwork network = new NeuralNetwork();
+			while ((line = reader.readLine()) != null) {
+				String[] tokens = line.split(" ");
+				String paramType = tokens[0];
+
+				switch (paramType) {
+					case "numlayers":
+						network.numLayers = Integer.parseInt(tokens[1]);
+						network.neuronsPerLayer = new int[network.numLayers];
+						network.activations = new String[network.numLayers];
+						break;
+					case "topology":
+						int maxLayerSize = 0;
+						for (int i = 1; i < tokens.length; i++) {
+							network.neuronsPerLayer[i - 1] = Integer.parseInt(tokens[i]);
+							maxLayerSize = Math.max(maxLayerSize, network.neuronsPerLayer[i - 1]);
+						}
+						network.neurons = new double[network.numLayers][maxLayerSize];
+						network.neuronsRaw = new double[network.numLayers][maxLayerSize];
+						network.biases = new double[network.numLayers][maxLayerSize];
+						network.weights = new double[network.numLayers][maxLayerSize][maxLayerSize];
+						break;
+					case "activations":
+						for (int i = 1; i < tokens.length; i++) {
+							network.activations[i - 1] = tokens[i];
+						}
+						break;
+					case "regularization":
+						network.regularizationType = RegularizationType.valueOf(tokens[1]);
+						network.lambda = Double.parseDouble(tokens[2]);
+						break;
+					case "biases":
+						int layerIndex = 0;
+						int neuronIndex = 0;
+						for (int i = 1; i < tokens.length; i++) {
+							network.biases[layerIndex][neuronIndex] = Double.parseDouble(tokens[i]);
+							neuronIndex++;
+							if (neuronIndex == network.neuronsPerLayer[layerIndex]) {
+								neuronIndex = 0;
+								layerIndex++;
+							}
+						}
+						break;
+					case "weights":
+						layerIndex = 1;
+						neuronIndex = 0;
+						int incomingNeuronIndex = 0;
+						for (int i = 1; i < tokens.length; i++) {
+							network.weights[layerIndex][neuronIndex][incomingNeuronIndex] = Double
+									.parseDouble(tokens[i]);
+							incomingNeuronIndex++;
+							if (incomingNeuronIndex == network.neuronsPerLayer[layerIndex - 1]) {
+								incomingNeuronIndex = 0;
+								neuronIndex++;
+								if (neuronIndex == network.neuronsPerLayer[layerIndex]) {
+									neuronIndex = 0;
+									layerIndex++;
+								}
+							}
+						}
+						break;
+				}
+			}
+			return network;
+		} catch (FileNotFoundException e) {
+			System.out.println("File not found");
+		} catch (IOException e) {
+			System.out.println("Error reading from file");
+		} catch (ArrayIndexOutOfBoundsException e) {
+			System.out.println("File not formatted correctly");
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return null;
