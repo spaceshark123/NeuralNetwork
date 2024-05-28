@@ -291,8 +291,8 @@ class Main {
 						continue;
 					}
 				} else if(s[0].equals("train")) {
-					if(s.length < 5) {
-						Output("please specify the following:\n    - path to the training set\n    - number of epochs\n    - learning rate\n    - loss function\n    - batch size (optional)\n    - decay rate (optional)\n    - clip threshold (optional)\n    - momentum (optional)");
+					if(s.length < 6) {
+						Output("please specify the following:\n    - path to the training set or 'mnist'\n    - number of epochs\n    - learning rate\n    - loss function\n    - optimizer\n    - 'custom' (optional to specify custom optimizer hyperparameters)\n    - batch size (optional)\n    - decay rate (optional)\n    - clip threshold (optional)");
 						continue;
 					}
 					//trainset file must be formatted:
@@ -306,38 +306,99 @@ class Main {
 								Output("the mnist dataset has not yet been initialized. run 'mnist'");
 								continue;
 							} else {
-								if(!(s[4].equals("mse") || s[4].equals("categorical_crossentropy") || s[4].equals("cce") || s[4].equals("sse"))) {
+								if (!(s[4].equals("mse") || s[4].equals("categorical_crossentropy")
+										|| s[4].equals("cce") || s[4].equals("sse"))) {
 									//invalid loss function
 									Output("invalid loss function. choices are:\n    - mse\n    - sse\n    - categorical_crossentropy");
 									continue;
 								}
+								if (!(s[5].equals("sgd") || s[5].equals("sgdmomentum") || s[5].equals("adagrad")
+										|| s[5].equals("rmsprop") || s[5].equals("adam"))) {
+									//invalid loss function
+									Output("invalid optimizer. choices are:\n    - sgd\n    - sgdmomentum\n    - adagrad\n    - rmsprop\n    - adam");
+									continue;
+								}
+								int ind = 6;
+								NeuralNetwork.Optimizer optimizer;
+								switch (s[5]) {
+									case "sgd":
+										optimizer = new NeuralNetwork.OptimizerType.SGD();
+										break;
+									case "sgdmomentum":
+										//check if custom arguments are provided
+										double momentum = 0.9;
+										if (s.length >= 7) {
+											if (s[6].equals("custom")) {
+												//use custom momentum
+												ind++;
+												Output("enter the momentum value (beta): ");
+												momentum = Double.parseDouble(Input(scan));
+											}
+										}
+										optimizer = new NeuralNetwork.OptimizerType.SGDMomentum(momentum);
+										break;
+									case "adagrad":
+										optimizer = new NeuralNetwork.OptimizerType.AdaGrad();
+										break;
+									case "rmsprop":
+										//check if custom arguments are provided
+										double decayRate = 0.9;
+										if (s.length >= 7) {
+											if (s[6].equals("custom")) {
+												//use custom decay rate
+												ind++;
+												Output("enter the decay rate (rho): ");
+												decayRate = Double.parseDouble(Input(scan));
+											}
+										}
+										optimizer = new NeuralNetwork.OptimizerType.RMSProp(decayRate);
+										break;
+									case "adam":
+										//check if custom arguments are provided
+										double beta1 = 0.9;
+										double beta2 = 0.999;
+										if (s.length >= 7) {
+											if (s[6].equals("custom")) {
+												//use custom beta values
+												ind++;
+												Output("enter the beta1 value: ");
+												beta1 = Double.parseDouble(Input(scan));
+												Output("enter the beta2 value: ");
+												beta2 = Double.parseDouble(Input(scan));
+											}
+										}
+										optimizer = new NeuralNetwork.OptimizerType.Adam(beta1, beta2);
+										break;
+									default:
+										optimizer = new NeuralNetwork.OptimizerType.SGD();
+										break;
+								}
 
 								//set max batchSize to 1000
 								int batchSize = mnistImages.length;
-								if(s.length >= 6) {
-									batchSize = Integer.parseInt(s[5]);
+								if (s.length >= ind + 1) {
+									batchSize = Integer.parseInt(s[ind]);
+									ind++;
 								}
 								//convert labels to expected outputs
 								double decay = 0;
-								if(s.length >= 7) {
-									decay = Double.parseDouble(s[6]);
+								if(s.length >= ind+1) {
+									decay = Double.parseDouble(s[ind]);
+									ind++;
 								}
 								double clipThreshold = 1;
-								if(s.length >= 8) {
-									clipThreshold = Double.parseDouble(s[7]);
+								if(s.length >= ind+1) {
+									clipThreshold = Double.parseDouble(s[ind]);
+									ind++;
 								}
 								nn.clipThreshold = clipThreshold;
-								double momentum = 0.1;
-								if(s.length >= 9) {
-									momentum = Double.parseDouble(s[8]);
-								}
 								//since mnist is a classification model, display accuracy as we go
 								nn.displayAccuracy = true;
 								String lossFunction = s[4];
 								lossFunction = lossFunction.equals("cce") ? "categorical_crossentropy" : lossFunction;
 								int epochs = Integer.parseInt(s[2]);
 								ChartUpdater chartUpdater = new ChartUpdater(epochs);
-								nn.Train(mnistImages, mnistOutputs, epochs, Double.parseDouble(s[3]), batchSize, lossFunction, decay, momentum, chartUpdater);
+								nn.Train(mnistImages, mnistOutputs, epochs, Double.parseDouble(s[3]), batchSize, lossFunction, decay, optimizer, chartUpdater);
 							}
 						} else {
 							//train on custom file
@@ -355,11 +416,92 @@ class Main {
 								Output("input/output sizes dont match the network");
 								continue;
 							}
-							if(!(s[4].equals("mse") || s[4].equals("categorical_crossentropy") || s[4].equals("cce") || s[4].equals("sse"))) {
+							if (!(s[4].equals("mse") || s[4].equals("categorical_crossentropy") || s[4].equals("cce")
+									|| s[4].equals("sse"))) {
 								//invalid loss function
 								Output("invalid loss function. choices are:\n    - mse\n    - sse\n    - categorical_crossentropy");
 								continue;
 							}
+							if (!(s[5].equals("sgd") || s[5].equals("sgdmomentum") || s[4].equals("adagrad")
+									|| s[4].equals("rmsprop") || s[4].equals("adam"))) {
+								//invalid loss function
+								Output("invalid optimizer. choices are:\n    - sgd\n    - sgdmomentum\n    - adagrad\n    - rmsprop\n    - adam");
+								continue;
+							}
+							int ind = 6;
+							NeuralNetwork.Optimizer optimizer;
+							switch (s[5]) {
+								case "sgd":
+									optimizer = new NeuralNetwork.OptimizerType.SGD();
+									break;
+								case "sgdmomentum":
+									//check if custom arguments are provided
+									double momentum = 0.9;
+									if (s.length >= 7) {
+										if (s[6].equals("custom")) {
+											//use custom momentum
+											ind++;
+											Output("enter the momentum value (beta): ");
+											momentum = Double.parseDouble(Input(scan));
+										}
+									}
+									optimizer = new NeuralNetwork.OptimizerType.SGDMomentum(momentum);
+									break;
+								case "adagrad":
+									optimizer = new NeuralNetwork.OptimizerType.AdaGrad();
+									break;
+								case "rmsprop":
+									//check if custom arguments are provided
+									double decayRate = 0.9;
+									if (s.length >= 7) {
+										if (s[6].equals("custom")) {
+											//use custom decay rate
+											ind++;
+											Output("enter the decay rate (rho): ");
+											decayRate = Double.parseDouble(Input(scan));
+										}
+									}
+									optimizer = new NeuralNetwork.OptimizerType.RMSProp(decayRate);
+									break;
+								case "adam":
+									//check if custom arguments are provided
+									double beta1 = 0.9;
+									double beta2 = 0.999;
+									if (s.length >= 7) {
+										if (s[6].equals("custom")) {
+											//use custom beta values
+											ind++;
+											Output("enter the beta1 value: ");
+											beta1 = Double.parseDouble(Input(scan));
+											Output("enter the beta2 value: ");
+											beta2 = Double.parseDouble(Input(scan));
+										}
+									}
+									optimizer = new NeuralNetwork.OptimizerType.Adam(beta1, beta2);
+									break;
+								default:
+									optimizer = new NeuralNetwork.OptimizerType.SGD();
+									break;
+							}
+
+							//set max batchSize to 1000
+							int batchSize = mnistImages.length;
+							if (s.length >= ind + 1) {
+								batchSize = Integer.parseInt(s[ind]);
+								ind++;
+							}
+							//convert labels to expected outputs
+							double decay = 0;
+							if(s.length >= ind+1) {
+								decay = Double.parseDouble(s[ind]);
+								ind++;
+							}
+							double clipThreshold = 1;
+							if(s.length >= ind+1) {
+								clipThreshold = Double.parseDouble(s[ind]);
+								ind++;
+							}
+							nn.clipThreshold = clipThreshold;
 							//parse inputs and outputs
 							double[][] inputs = new double[numCases][inputSize];
 							double[][] outputs = new double[numCases][outputSize];
@@ -378,28 +520,10 @@ class Main {
 								progressBar(30, "Parsing training data", i+1, numCases);
 							}
 							System.out.println();
-		
-							int batchSize = inputs.length;
-							if(s.length >= 6) {
-								batchSize = Integer.parseInt(s[5]);
-							}
-							double decay = 0;
-							if(s.length >= 7) {
-								decay = Double.parseDouble(s[6]);
-							}
-						    double clipThreshold = 1;
-							if(s.length >= 8) {
-								clipThreshold = Double.parseDouble(s[7]);
-							}
-							nn.clipThreshold = clipThreshold;
-							double momentum = 0.1;
-							if(s.length >= 9) {
-								momentum = Double.parseDouble(s[8]);
-							}
 							nn.displayAccuracy = false;
 							String lossFunction = s[4];
 							lossFunction = lossFunction.equals("cce") ? "categorical_crossentropy" : lossFunction;
-							nn.Train(inputs, outputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, lossFunction, decay, momentum, null);
+							nn.Train(inputs, outputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, lossFunction, decay, optimizer, null);
 						}
 					} catch(FileNotFoundException e) {
 						Output("file not found");
@@ -583,7 +707,7 @@ class Main {
 						} else if(s[1].equals("mutate")) {
 							Output("syntax: mutate [mutation chance decimal] [variation]\nmutates neural network to simulate evolution. useful for genetic algorithms");
 						} else if(s[1].equals("train")) {
-							Output("syntax: train [training data file path/'mnist'] [epochs] [learning rate] [loss function] [optional: batch size, default=input size] [optional: decay rate, default=0] [optional: clip threshold, default=1] [optional: momentum, default=0.1]\ntrains neural network on specified training data or mnist dataset based on specified hyperparameters. loss function choices are\n    - mse\n    - sse\n    - categorical_crossentropy\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
+							Output("syntax: train [training data file path/'mnist'] [epochs] [learning rate] [loss function] [optimizer] [optional: 'custom', for custom optimizer hyperparameters] [optional: batch size, default=input size] [optional: decay rate, default=0] [optional: clip threshold, default=1]\ntrains neural network on specified training data or mnist dataset based on specified hyperparameters and optimizer\n\nloss function choices are\n    - mse\n    - sse\n    - categorical_crossentropy\n\noptimizer choices are:\n    - sgd\n    - sgdmomentum (momentum, default=0.9)\n    - adagrad\n    - rmsprop (decay rate, default=0.9)\n    - adam (beta1, default=0.9) (beta2, default=0.999)\n\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("cost")) {
 							Output("syntax: cost [test data file path] [loss function] or cost mnist\nreturns the average cost of the neural network for the specified dataset or the accuracy percentage for the mnist dataset. loss function choices are\n    - mse\n    - sse\n    - categorical_crossentropy\ntest data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("help")) {

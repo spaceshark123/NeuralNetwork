@@ -55,13 +55,231 @@ public class NeuralNetwork implements Serializable {
 		void onEpochUpdate(int epoch, int batch, double progress, double accuracy);
 	}
 
+	public static interface Optimizer {
+		void initialize(int[] neuronsPerLayer, double[][] biases, double[][][] weights);
+		void step(double[][] avgBiasGradient, double[][][] avgWeightGradient, double learningRate);
+	}
+
+	public static class OptimizerType {
+		public static class SGD implements Optimizer {
+			private double[][] biases;
+			private double[][][] weights;
+			private int[] neuronsPerLayer;
+
+			@Override
+			public void initialize(int[] neuronsPerLayer, double[][] biases, double[][][] weights) {
+				this.biases = biases;
+				this.weights = weights;
+				this.neuronsPerLayer = neuronsPerLayer;
+			}
+
+			@Override
+			public void step(double[][] avgBiasGradient, double[][][] avgWeightGradient, double learningRate) {
+				for (int i = 1; i < neuronsPerLayer.length; i++) {
+					for (int j = 0; j < neuronsPerLayer[i]; j++) {
+						//apply velocity
+						biases[i][j] = biases[i][j] - learningRate * avgBiasGradient[i][j];
+						for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
+							//apply velocity
+							weights[i][j][k] = weights[i][j][k] - learningRate * avgWeightGradient[i][j][k];
+						}
+					}
+				}
+			}
+		}
+
+		public static class SGDMomentum implements Optimizer {
+			private double[][] biases;
+			private double[][][] weights;
+			private int[] neuronsPerLayer;
+			private double[][] biasVelocity;
+			private double[][][] weightVelocity;
+			private double momentum;
+
+			public SGDMomentum(double momentum) {
+				this.momentum = momentum;
+			}
+
+			@Override
+			public void initialize(int[] neuronsPerLayer, double[][] biases, double[][][] weights) {
+				this.biases = biases;
+				this.weights = weights;
+				this.neuronsPerLayer = neuronsPerLayer;
+				biasVelocity = new double[biases.length][biases[0].length];
+				weightVelocity = new double[weights.length][weights[0].length][weights[0][0].length];
+			}
+
+			@Override
+			public void step(double[][] avgBiasGradient, double[][][] avgWeightGradient, double learningRate) {
+				for (int i = 1; i < neuronsPerLayer.length; i++) {
+					for (int j = 0; j < neuronsPerLayer[i]; j++) {
+						//do momentum
+						biasVelocity[i][j] = momentum * biasVelocity[i][j] + (1 - momentum) * avgBiasGradient[i][j];
+						//apply velocity
+						biases[i][j] = biases[i][j] - learningRate * biasVelocity[i][j];
+						for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
+							//do momentum
+							weightVelocity[i][j][k] = momentum * weightVelocity[i][j][k] + (1 - momentum) * avgWeightGradient[i][j][k];
+							//apply velocity
+							weights[i][j][k] = weights[i][j][k] - learningRate * weightVelocity[i][j][k];
+						}
+					}
+				}
+			}
+		}
+
+		public static class AdaGrad implements Optimizer {
+			private double[][] biases;
+			private double[][][] weights;
+			private int[] neuronsPerLayer;
+			private double[][] biasCache;
+			private double[][][] weightCache;
+			private double epsilon = 1e-8;
+
+			@Override
+			public void initialize(int[] neuronsPerLayer, double[][] biases, double[][][] weights) {
+				this.biases = biases;
+				this.weights = weights;
+				this.neuronsPerLayer = neuronsPerLayer;
+				biasCache = new double[biases.length][biases[0].length];
+				weightCache = new double[weights.length][weights[0].length][weights[0][0].length];
+			}
+
+			@Override
+			public void step(double[][] avgBiasGradient, double[][][] avgWeightGradient, double learningRate) {
+				for (int i = 1; i < neuronsPerLayer.length; i++) {
+					for (int j = 0; j < neuronsPerLayer[i]; j++) {
+						//update cache
+						biasCache[i][j] += avgBiasGradient[i][j] * avgBiasGradient[i][j];
+						//apply update
+						biases[i][j] = biases[i][j] - learningRate * avgBiasGradient[i][j] / (Math.sqrt(biasCache[i][j]) + epsilon);
+						for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
+							//update cache
+							weightCache[i][j][k] += avgWeightGradient[i][j][k] * avgWeightGradient[i][j][k];
+							//apply update
+							weights[i][j][k] = weights[i][j][k] - learningRate * avgWeightGradient[i][j][k] / (Math.sqrt(weightCache[i][j][k]) + epsilon);
+						}
+					}
+				}
+			}
+		}
+
+		public static class RMSProp implements Optimizer {
+			private double[][] biases;
+			private double[][][] weights;
+			private int[] neuronsPerLayer;
+			private double[][] biasCache;
+			private double[][][] weightCache;
+			private double decayRate;
+			private double epsilon = 1e-8;
+
+			public RMSProp(double decayRate) {
+				this.decayRate = decayRate;
+			}
+
+			@Override
+			public void initialize(int[] neuronsPerLayer, double[][] biases, double[][][] weights) {
+				this.biases = biases;
+				this.weights = weights;
+				this.neuronsPerLayer = neuronsPerLayer;
+				biasCache = new double[biases.length][biases[0].length];
+				weightCache = new double[weights.length][weights[0].length][weights[0][0].length];
+			}
+
+			@Override
+			public void step(double[][] avgBiasGradient, double[][][] avgWeightGradient, double learningRate) {
+				for (int i = 1; i < neuronsPerLayer.length; i++) {
+					for (int j = 0; j < neuronsPerLayer[i]; j++) {
+						//update cache
+						biasCache[i][j] = decayRate * biasCache[i][j] + (1 - decayRate) * avgBiasGradient[i][j] * avgBiasGradient[i][j];
+						//apply update
+						biases[i][j] = biases[i][j] - learningRate * avgBiasGradient[i][j] / (Math.sqrt(biasCache[i][j]) + epsilon);
+						for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
+							//update cache
+							weightCache[i][j][k] = decayRate * weightCache[i][j][k] + (1 - decayRate) * avgWeightGradient[i][j][k] * avgWeightGradient[i][j][k];
+							//apply update
+							weights[i][j][k] = weights[i][j][k] - learningRate * avgWeightGradient[i][j][k] / (Math.sqrt(weightCache[i][j][k]) + epsilon);
+						}
+					}
+				}
+			}
+		}
+
+		public static class Adam implements Optimizer {
+			private double[][] biases;
+			private double[][][] weights;
+			private int[] neuronsPerLayer;
+			private double[][] biasM;
+			private double[][] biasV;
+			private double[][][] weightM;
+			private double[][][] weightV;
+			private double beta1;
+			private double beta2;
+			private double epsilon = 1e-8;
+			private double beta1t = 1;
+			private double beta2t = 1;
+
+			public Adam(double beta1, double beta2) {
+				this.beta1 = beta1;
+				this.beta2 = beta2;
+			}
+
+			@Override
+			public void initialize(int[] neuronsPerLayer, double[][] biases, double[][][] weights) {
+				this.biases = biases;
+				this.weights = weights;
+				this.neuronsPerLayer = neuronsPerLayer;
+				biasM = new double[biases.length][biases[0].length];
+				biasV = new double[biases.length][biases[0].length];
+				weightM = new double[weights.length][weights[0].length][weights[0][0].length];
+				weightV = new double[weights.length][weights[0].length][weights[0][0].length];
+			}
+
+			@Override
+			public void step(double[][] avgBiasGradient, double[][][] avgWeightGradient, double learningRate) {
+				beta1t *= beta1;
+				beta2t *= beta2;
+				double biasCorrectedM;
+				double biasCorrectedV;
+				double weightCorrectedM;
+				double weightCorrectedV;
+				for (int i = 1; i < neuronsPerLayer.length; i++) {
+					for (int j = 0; j < neuronsPerLayer[i]; j++) {
+						//update biased first moment estimate
+						biasM[i][j] = beta1 * biasM[i][j] + (1 - beta1) * avgBiasGradient[i][j];
+						//update biased second raw moment estimate
+						biasV[i][j] = beta2 * biasV[i][j] + (1 - beta2) * avgBiasGradient[i][j] * avgBiasGradient[i][j];
+						//correct bias first moment
+						biasCorrectedM = biasM[i][j] / (1 - beta1t);
+						//correct bias second moment
+						biasCorrectedV = biasV[i][j] / (1 - beta2t);
+						//apply update
+						biases[i][j] = biases[i][j] - learningRate * biasCorrectedM / (Math.sqrt(biasCorrectedV) + epsilon);
+						for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
+							//update biased first moment estimate
+							weightM[i][j][k] = beta1 * weightM[i][j][k] + (1 - beta1) * avgWeightGradient[i][j][k];
+							//update biased second raw moment estimate
+							weightV[i][j][k] = beta2 * weightV[i][j][k] + (1 - beta2) * avgWeightGradient[i][j][k] * avgWeightGradient[i][j][k];
+							//correct bias first moment
+							weightCorrectedM = weightM[i][j][k] / (1 - beta1t);
+							//correct bias second moment
+							weightCorrectedV = weightV[i][j][k] / (1 - beta2t);
+							//apply update
+							weights[i][j][k] = weights[i][j][k] - learningRate * weightCorrectedM / (Math.sqrt(weightCorrectedV) + epsilon);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	// Regularization settings (lambda = regularization strength)
 	protected double lambda = 0;
 	protected RegularizationType regularizationType = RegularizationType.NONE;
 	//used in gradient descent
 	volatile private double[][] avgBiasGradient;
 	volatile private double[][][] avgWeightGradient;
-	private Random r;
+	protected Random r;
 
 	//takes in int[] for number of neurons in each layer and string[] for activations of each layer
 	public NeuralNetwork(int[] topology, String[] active) {
@@ -630,6 +848,7 @@ public class NeuralNetwork implements Serializable {
 
 			// Read objects
 			NeuralNetwork loadedNetwork = (NeuralNetwork) oi.readObject();
+			loadedNetwork.r = new Random();
 
 			oi.close();
 			fi.close();
@@ -714,6 +933,7 @@ public class NeuralNetwork implements Serializable {
 						break;
 				}
 			}
+			network.r = new Random();
 			return network;
 		} catch (FileNotFoundException e) {
 			System.out.println("File not found");
@@ -888,9 +1108,12 @@ public class NeuralNetwork implements Serializable {
 
 	//uses SGD (stochastic gradient descent)
 	public void Train(double[][] inputs, double[][] outputs, int epochs, double learningRate, int batchSize,
-			String lossFunction, double decay, double momentum, TrainingCallback callback) {
+			String lossFunction, double decay, Optimizer optimizer, TrainingCallback callback) {
 		double lr = learningRate;
 		//list of indices for data points, will be randomized in each epoch
+		if (batchSize == -1) {
+			batchSize = inputs.length;
+		}
 		List<Integer> indices = new ArrayList<Integer>(inputs.length);
 		for (int i = 0; i < inputs.length; i++) {
 			indices.add(i);
@@ -909,9 +1132,7 @@ public class NeuralNetwork implements Serializable {
 			//batches wont divide evenly into samples
 			System.out.println("warning: training data size is not divisible by sample size");
 		}
-		//momentum vectors initialized to 0
-		double[][] vBiases = new double[numLayers][biases[0].length];
-		double[][][] vWeights = new double[numLayers][weights[0].length][weights[0][0].length];
+		optimizer.initialize(neuronsPerLayer, biases, weights);
 		avgBiasGradient = new double[numLayers][biases[0].length];
 		avgWeightGradient = new double[numLayers][weights[0].length][weights[0][0].length];
 		double avgBatchTime = 0;
@@ -937,10 +1158,8 @@ public class NeuralNetwork implements Serializable {
 		for (; epoch < epochs; iteration++) {
 			//do epoch batch stuff (iteration is the current cumulative batch iteration)
 			epochIteration = iteration % batchesPerEpoch;
-
-			if (batchSize == -1) {
-				batchSize = inputs.length;
-			}
+			//do exponential learning rate decay
+			lr = (1.0 / (1.0 + decay * iteration)) * learningRate;
 
 			batchIndices.clear();
 			// Use System.arraycopy for faster copying
@@ -955,22 +1174,15 @@ public class NeuralNetwork implements Serializable {
 				batchIndices.addAll(indices.subList(0, wrapAroundIndex));
 			}
 
-			// ArrayList<Integer> batchIndices = new ArrayList<Integer>(batchSize);
-			// for (int i = 0; i < batchSize; i++) {
-			// 	int index = (currentInd + i) % inputs.length;
-			// 	batchIndices.add(indices.get(index));
-			// }
-
-			//int numCorrect = 0;
 			numCorrect.set(0);
 			if (iteration > 0) {
 				//not first iteration, reset gradients
-				for (double[] subarray : avgBiasGradient) {
-					Arrays.fill(subarray, 0);
-				}
-				for (double[][] subarray : avgWeightGradient) {
-					for (double[] subarray2 : subarray) {
-						Arrays.fill(subarray2, 0);
+				for(int i = 1; i < numLayers; i++) {
+					for(int j = 0; j < neuronsPerLayer[i]; j++) {
+						avgBiasGradient[i][j] = 0;
+						for (int k = 0; k < neuronsPerLayer[i-1]; k++) {
+							avgWeightGradient[i][j][k] = 0;
+						}
 					}
 				}
 			}
@@ -999,10 +1211,10 @@ public class NeuralNetwork implements Serializable {
 				}
 
 				// Reset gradients
-				for(int i = 0; i < numLayers; i++) {
-					for(int j = 0; j < neurons.length; j++) {
+				for(int i = 1; i < numLayers; i++) {
+					for(int j = 0; j < neuronsPerLayer[i]; j++) {
 						thisBiasGradient[i][j] = 0;
-						for (int k = 0; k < neurons[0].length; k++) {
+						for (int k = 0; k < neuronsPerLayer[i-1]; k++) {
 							thisWeightGradient[i][j][k] = 0;
 						}
 					}
@@ -1013,39 +1225,34 @@ public class NeuralNetwork implements Serializable {
 						outputs[caseInd], 1, lossFunction);
 
 				// Do weighted sum of gradients for average
-				for (int i = 0; i < numLayers; i++) {
-					for (int j = 0; j < biases[0].length; j++) {
+				for (int i = 1; i < numLayers; i++) {
+					for (int j = 0; j < neuronsPerLayer[i]; j++) {
 						avgBiasGradient[i][j] += thisBiasGradient[i][j] * weightedAvg;
-						for (int k = 0; k < weights[0][0].length; k++) {
+						for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
 							avgWeightGradient[i][j][k] += thisWeightGradient[i][j][k] * weightedAvg;
 						}
 					}
 				}
 			});
 
-			//use average gradients to find new parameters
+			// gradient post-processing
 			for (int i = 1; i < numLayers; i++) {
 				for (int j = 0; j < neuronsPerLayer[i]; j++) {
+					// gradient clipping
 					avgBiasGradient[i][j] = clamp(avgBiasGradient[i][j], -clipThreshold, clipThreshold);
-					//do momentum
-					vBiases[i][j] = momentum * vBiases[i][j] - avgBiasGradient[i][j] * lr;
-					//apply velocity
-					biases[i][j] = biases[i][j] + vBiases[i][j];
 					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
-						avgWeightGradient[i][j][k] = clamp(avgWeightGradient[i][j][k], -clipThreshold, clipThreshold);
-						// apply regularization gradient
+						// regularization
 						if (regularizationType == RegularizationType.L1) {
 							avgWeightGradient[i][j][k] += lambda * Math.signum(weights[i][j][k]);
 						} else if (regularizationType == RegularizationType.L2) {
 							avgWeightGradient[i][j][k] += lambda * weights[i][j][k];
 						}
-						//do momentum
-						vWeights[i][j][k] = momentum * vWeights[i][j][k] - avgWeightGradient[i][j][k] * lr;
-						//apply velocity
-						weights[i][j][k] = weights[i][j][k] + vWeights[i][j][k];
+						// gradient clipping
+						avgWeightGradient[i][j][k] = clamp(avgWeightGradient[i][j][k], -clipThreshold, clipThreshold);
 					}
 				}
 			}
+			optimizer.step(avgBiasGradient, avgWeightGradient, lr);
 			long endTime = System.currentTimeMillis();
 			double batchTime = (double)((endTime - startTime) / 1000.0);
 			avgBatchTime += batchTime;
@@ -1054,8 +1261,6 @@ public class NeuralNetwork implements Serializable {
 				//new epoch
 				currentInd = 0;
 				epoch++;
-				//do exponential learning rate decay
-				lr = (1.0 / (1.0 + decay * epoch)) * learningRate;
 				Collections.shuffle(indices);
 			}
 			progress = epoch + currentInd / (double) inputs.length;

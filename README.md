@@ -2,7 +2,7 @@
 
 # Neural Network Implementation in Java
 
-This project provides a flexible and extensible implementation of a multithreaded stochastic gradient descent feedforward neural network in Java, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use and customize, making it a valuable tool for various machine learning and deep learning tasks.
+This project provides a flexible and extensible implementation of a multithreaded feedforward neural network in Java with popular optimizers included, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use and customize, making it a valuable tool for various machine learning and deep learning tasks.
 
 ## Table of Contents
 
@@ -30,15 +30,15 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 - **Multiple Loss Functions**:  Supports major loss/error functions: Mean Squared Error, Sum Squared Error, and Categorical Cross-Entropy.
 
+- **Multiple Optimizers**: Includes popular optimizers like Stochastic gradient descent (SGD), SGD with momentum, AdaGrad, RMSProp, and Adam. Supports additional, custom optimizers using the `NeuralNetwork.Optimizer` interface.
+
 - **Weight Initialization**: Utilizes weight initialization techniques like Xavier (for linear, sigmoid, and tanh) and He (for relu) for better convergence.
 
-- **Training with SGD**: Train your neural network using mini-batched Stochastic Gradient Descent (SGD) with customizable learning rate, mini-batch size, and decay.
+- **Training**: Train your neural network using mini-batched Gradient Descent (SGD) with customizable optimizer, loss function, learning rate, mini-batch size, and learning rate decay.
 
 - **Gradient Clipping**: Helps prevent exploding gradients during training by setting a gradient clipping threshold.
 
 - **Regularization Techniques**: Supports popular regularization techniques like L1 and L2 to reduce overfitting by minimizing parameter complexity.
-
-- **Momentum**: Uses momentum-based gradient descent to accelerate convergence and dampen oscillation.
 
 - **Save and Load Models**: Easily save trained models to disk and load them for future use.
 
@@ -70,11 +70,24 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
    //set regularization of network
    network.SetRegularizationType(NeuralNetwork.RegularizationType.L2); 
    network.SetRegularizationLambda(0.001);
+   NeuralNetwork.Optimizer optimizer = new NeuralNetwork.OptimizerType.Adam(0.9, 0.999); //specify optimizer for training
    //train the network with no callback
-   network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, momentum, null);
+   network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
    ```
 
-   Or, provide a training callback by passing in a class implementing the static `NeuralNetwork.TrainingCallback` interface as an argument. This can be used to make your own custom train addons like a graph visualization of the data. The `ChartUpdater` class has been provided to visualize accuracy data using this callback interface.
+	optimizers are of type `NeuralNetwork.Optimizer` and included optimizers are found in `NeuralNetwork.OptimizerType`. Included optimizers are:
+
+	- `SGD()`
+
+	- `SGDMomentum(double momentum)`
+
+	- `AdaGrad()`
+
+	- `RMSProp(double decayRate)`
+
+	- `Adam(double beta1, double beta2)`
+
+   Optionally, provide a custom training callback by passing in a class implementing the static `NeuralNetwork.TrainingCallback` interface as an argument. This can be used to make your own custom train addons like a graph visualization of the data. The `ChartUpdater` class has been provided to visualize accuracy data using this callback interface.
 
 	```java
 	public class Callback implements NeuralNetwork.TrainingCallback {
@@ -88,7 +101,41 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
 		public static void main(String[] args) {
 			...
 			Callback callback = new Callback();
-			network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, momentum, callback);
+			network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, callback);
+		}
+	}
+	```
+
+	Also, custom optimizers can be made by creating a class implementing the static `NeuralNetwork.Optimizer` interface. This can be used to create other optimizers not already included in the NeuralNetwork class.
+
+	```java
+	public static class CustomOptimizer implements Optimizer {
+		//assign to the elements of biases and weights in the step function
+		private double[][] biases;
+		private double[][][] weights;
+		private int[] neuronsPerLayer;
+
+		@Override
+		public void initialize(int[] neuronsPerLayer, double[][] biases, double[][][] weights) {
+			this.biases = biases;
+			this.weights = weights;
+			this.neuronsPerLayer = neuronsPerLayer;
+			//other initializations
+			...
+		}
+
+		@Override
+		public void step(double[][] avgBiasGradient, double[][][] avgWeightGradient, double learningRate) {
+			for (int i = 1; i < neuronsPerLayer.length; i++) {
+				for (int j = 0; j < neuronsPerLayer[i]; j++) {
+					//set biases
+					biases[i][j] = ...
+					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
+						//set weights
+						weights[i][j][k] = ...
+					}
+				}
+			}
 		}
 	}
 	```
@@ -216,7 +263,7 @@ This will launch the program's custom console, allowing you to control and modif
 
 - `load`: Load a pre-trained neural network from a saved model file.
 
-- `train`: Train the current neural network using your dataset and desired hyperparameters.
+- `train`: Train the current neural network using your dataset, loss function, optimizer, and desired hyperparameters.
 
 - `evaluate`: Use the trained neural network to make predictions on new data.
 
@@ -246,7 +293,7 @@ This will launch the program's custom console, allowing you to control and modif
 
 - For example, to create a new neural network, you would type `create`, and then follow the prompts to specify the topology and activation functions.
 
-- To train a network, use the `train` command and provide details like the path to the training file or specify `mnist`, number of epochs, learning rate, batch size, loss function, learning decay rate
+- To train a network, use the `train` command and provide details like the path to the training file or specify `mnist`, number of epochs, learning rate, mini-batch size, loss function, optimizer, learning decay rate
 
 - For evaluation, use the evaluate command, and input the data you want to predict on, or `mnist [case #]`
 
@@ -278,5 +325,5 @@ A few neural networks and their training sets have been pre-included into the pr
 - `SavedNetwork2`: deep neural network to add 2 numbers (object mode)
 - `TrainSet1`: training/test dataset for adding 2 numbers (can be used for `SavedNetwork1` and `SavedNetwork2`) (object mode)
 - `MNISTNetwork`: an untrained neural network with the correct topology to evaluate MNIST cases (digit recognition). accuracy ≈ 10.61% (object mode)
-- `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition) with near perfect accuracy. accuracy ≈ 99.78% (object mode)
+- `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition) with near perfect accuracy. accuracy ≈ 99.94% (object mode)
 - `MNISTParams`: same as `MNISTNetworkTrained`, but as plain text (parameters mode)
