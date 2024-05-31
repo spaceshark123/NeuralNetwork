@@ -16,16 +16,20 @@ import java.awt.*;
 import java.text.DecimalFormat;
 
 public class ChartUpdater implements NeuralNetwork.TrainingCallback {
-    private XYSeries accuracySeries;
+    private XYSeries trainAccuracySeries;
+    private XYSeries testAccuracySeries;
     private JFreeChart chart;
     private TextTitle caption;
     private int epochs;
 
     public ChartUpdater(int epochs) {
-        accuracySeries = new XYSeries("Accuracy");
+        trainAccuracySeries = new XYSeries("Train Accuracy");
+        testAccuracySeries = new XYSeries("Test Accuracy");
+
         this.epochs = epochs;
         XYSeriesCollection dataset = new XYSeriesCollection();
-        dataset.addSeries(accuracySeries);
+        dataset.addSeries(trainAccuracySeries);
+        dataset.addSeries(testAccuracySeries);
         caption = new TextTitle("Current Epoch: 0, Current Batch: 0, Current Accuracy: 0.0%");
         chart = ChartFactory.createXYLineChart(
                 "Accuracy over Epochs",
@@ -40,7 +44,10 @@ public class ChartUpdater implements NeuralNetwork.TrainingCallback {
         XYPlot plot = chart.getXYPlot();
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
         renderer.setSeriesPaint(0, Color.RED);
-        plot.setRenderer(renderer);
+        XYLineAndShapeRenderer renderer2 = new XYLineAndShapeRenderer();
+        renderer2.setSeriesPaint(0, Color.BLUE);
+        plot.setRenderer(0, renderer);
+        plot.setRenderer(1, renderer2);
         plot.getRangeAxis().setRange(0, 100);
 
         NumberAxis domainAxis = (NumberAxis) plot.getDomainAxis();
@@ -64,12 +71,15 @@ public class ChartUpdater implements NeuralNetwork.TrainingCallback {
     }
 
     @Override
-    public void onEpochUpdate(int epoch, int batch, double progress, double accuracy) {
-        accuracySeries.add(progress, accuracy);
-            // Update caption
-            if(epoch <= epochs) {
-                caption.setText(String.format("Current Epoch: %d, Current Batch: %d, Current Accuracy: %f%%", epoch, batch, accuracy));
-                chart.fireChartChanged();
-            }
+    public void onEpochUpdate(int epoch, int batch, double progress, double trainAccuracy, double testAccuracy) {
+        trainAccuracySeries.add(progress, trainAccuracy);
+        if(testAccuracy != -1) {
+            testAccuracySeries.add(progress, testAccuracy);
+        }
+        // Update caption
+        if(epoch <= epochs) {
+            caption.setText(String.format("Current Epoch: %d, Current Batch: %d, Current Accuracy: %f%%", epoch, batch, trainAccuracy));
+            chart.fireChartChanged();
+        }
     }
 }

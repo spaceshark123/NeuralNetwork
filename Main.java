@@ -1,6 +1,17 @@
 import java.util.*;
 import java.lang.*;
 import java.io.*;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
+import java.awt.event.ComponentListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import javax.swing.WindowConstants;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 class Main {
 	public static int SIZE = 1000;
@@ -16,7 +27,7 @@ class Main {
 		NeuralNetwork nn = new NeuralNetwork();
 		Clear();
 
-		while(true) {
+		while (true) {
 			String[] s = Input(scan).split(" ");
 			try {
 				if(s[0].equals("load")) {
@@ -69,7 +80,10 @@ class Main {
 					} else {
 						Output("please specify a path and mode: 'object' or 'parameters'");
 					}
-				} else if(s[0].equals("exit")) {
+				} else if (s[0].equals("mnist") && s[1].equals("test")) {
+					//command mnist test was called
+					testMnist(nn);
+				} else if (s[0].equals("exit")) {
 					Output("exiting...");
 					break;
 				} else if(s[0].equals("info")) {
@@ -291,8 +305,8 @@ class Main {
 						continue;
 					}
 				} else if(s[0].equals("train")) {
-					if(s.length < 6) {
-						Output("please specify the following:\n    - path to the training set or 'mnist'\n    - number of epochs\n    - learning rate\n    - loss function\n    - optimizer\n    - 'custom' (optional to specify custom optimizer hyperparameters)\n    - batch size (optional)\n    - decay rate (optional)\n    - clip threshold (optional)");
+					if(s.length < 7) {
+						Output("please specify the following:\n    - path to the training set or 'mnist'\n    - train/test split (ratio between 0 and 1)\n    - number of epochs\n    - learning rate\n    - loss function\n    - optimizer\n    - 'custom' (optional to specify custom optimizer hyperparameters)\n    - batch size (optional)\n    - decay rate (optional)\n    - clip threshold (optional)");
 						continue;
 					}
 					//trainset file must be formatted:
@@ -306,29 +320,29 @@ class Main {
 								Output("the mnist dataset has not yet been initialized. run 'mnist'");
 								continue;
 							} else {
-								if (!(s[4].equals("mse") || s[4].equals("categorical_crossentropy")
-										|| s[4].equals("cce") || s[4].equals("sse"))) {
+								if (!(s[5].equals("mse") || s[5].equals("categorical_crossentropy")
+										|| s[5].equals("cce") || s[5].equals("sse"))) {
 									//invalid loss function
 									Output("invalid loss function. choices are:\n    - mse\n    - sse\n    - categorical_crossentropy");
 									continue;
 								}
-								if (!(s[5].equals("sgd") || s[5].equals("sgdmomentum") || s[5].equals("adagrad")
-										|| s[5].equals("rmsprop") || s[5].equals("adam"))) {
+								if (!(s[6].equals("sgd") || s[6].equals("sgdmomentum") || s[6].equals("adagrad")
+										|| s[6].equals("rmsprop") || s[6].equals("adam"))) {
 									//invalid loss function
 									Output("invalid optimizer. choices are:\n    - sgd\n    - sgdmomentum\n    - adagrad\n    - rmsprop\n    - adam");
 									continue;
 								}
-								int ind = 6;
+								int ind = 7;
 								NeuralNetwork.Optimizer optimizer;
-								switch (s[5]) {
+								switch (s[6]) {
 									case "sgd":
 										optimizer = new NeuralNetwork.OptimizerType.SGD();
 										break;
 									case "sgdmomentum":
 										//check if custom arguments are provided
 										double momentum = 0.9;
-										if (s.length >= 7) {
-											if (s[6].equals("custom")) {
+										if (s.length >= 8) {
+											if (s[7].equals("custom")) {
 												//use custom momentum
 												ind++;
 												Output("enter the momentum value (beta): ");
@@ -343,8 +357,8 @@ class Main {
 									case "rmsprop":
 										//check if custom arguments are provided
 										double decayRate = 0.9;
-										if (s.length >= 7) {
-											if (s[6].equals("custom")) {
+										if (s.length >= 8) {
+											if (s[7].equals("custom")) {
 												//use custom decay rate
 												ind++;
 												Output("enter the decay rate (rho): ");
@@ -357,8 +371,8 @@ class Main {
 										//check if custom arguments are provided
 										double beta1 = 0.9;
 										double beta2 = 0.999;
-										if (s.length >= 7) {
-											if (s[6].equals("custom")) {
+										if (s.length >= 8) {
+											if (s[7].equals("custom")) {
 												//use custom beta values
 												ind++;
 												Output("enter the beta1 value: ");
@@ -394,11 +408,22 @@ class Main {
 								nn.clipThreshold = clipThreshold;
 								//since mnist is a classification model, display accuracy as we go
 								nn.displayAccuracy = true;
-								String lossFunction = s[4];
+								String lossFunction = s[5];
 								lossFunction = lossFunction.equals("cce") ? "categorical_crossentropy" : lossFunction;
-								int epochs = Integer.parseInt(s[2]);
+								int epochs = Integer.parseInt(s[3]);
 								ChartUpdater chartUpdater = new ChartUpdater(epochs);
-								nn.Train(mnistImages, mnistOutputs, epochs, Double.parseDouble(s[3]), batchSize, lossFunction, decay, optimizer, chartUpdater);
+								//data split into training and testing
+								double splitRatio = Double.parseDouble(s[2]);
+								splitRatio = Math.min(1, Math.max(1.0 / mnistImages.length, splitRatio));
+								double[][] trainImages = Arrays.copyOfRange(mnistImages, 0,
+										(int) (mnistImages.length * splitRatio));
+								double[][] testImages = Arrays.copyOfRange(mnistImages, (int) (mnistImages.length * splitRatio),
+										mnistImages.length);
+								double[][] trainOutputs = Arrays.copyOfRange(mnistOutputs, 0,
+										(int) (mnistOutputs.length * splitRatio));
+								double[][] testOutputs = Arrays.copyOfRange(mnistOutputs, (int) (mnistOutputs.length * splitRatio),
+										mnistOutputs.length);
+								nn.Train(trainImages, trainOutputs, testImages, testOutputs, epochs, Double.parseDouble(s[4]), batchSize, lossFunction, decay, optimizer, chartUpdater);
 							}
 						} else {
 							//train on custom file
@@ -416,29 +441,29 @@ class Main {
 								Output("input/output sizes dont match the network");
 								continue;
 							}
-							if (!(s[4].equals("mse") || s[4].equals("categorical_crossentropy") || s[4].equals("cce")
-									|| s[4].equals("sse"))) {
+							if (!(s[5].equals("mse") || s[5].equals("categorical_crossentropy") || s[5].equals("cce")
+									|| s[5].equals("sse"))) {
 								//invalid loss function
 								Output("invalid loss function. choices are:\n    - mse\n    - sse\n    - categorical_crossentropy");
 								continue;
 							}
-							if (!(s[5].equals("sgd") || s[5].equals("sgdmomentum") || s[4].equals("adagrad")
-									|| s[4].equals("rmsprop") || s[4].equals("adam"))) {
+							if (!(s[6].equals("sgd") || s[6].equals("sgdmomentum") || s[6].equals("adagrad")
+									|| s[6].equals("rmsprop") || s[6].equals("adam"))) {
 								//invalid loss function
 								Output("invalid optimizer. choices are:\n    - sgd\n    - sgdmomentum\n    - adagrad\n    - rmsprop\n    - adam");
 								continue;
 							}
-							int ind = 6;
+							int ind = 7;
 							NeuralNetwork.Optimizer optimizer;
-							switch (s[5]) {
+							switch (s[6]) {
 								case "sgd":
 									optimizer = new NeuralNetwork.OptimizerType.SGD();
 									break;
 								case "sgdmomentum":
 									//check if custom arguments are provided
 									double momentum = 0.9;
-									if (s.length >= 7) {
-										if (s[6].equals("custom")) {
+									if (s.length >= 8) {
+										if (s[7].equals("custom")) {
 											//use custom momentum
 											ind++;
 											Output("enter the momentum value (beta): ");
@@ -453,8 +478,8 @@ class Main {
 								case "rmsprop":
 									//check if custom arguments are provided
 									double decayRate = 0.9;
-									if (s.length >= 7) {
-										if (s[6].equals("custom")) {
+									if (s.length >= 8) {
+										if (s[7].equals("custom")) {
 											//use custom decay rate
 											ind++;
 											Output("enter the decay rate (rho): ");
@@ -467,8 +492,8 @@ class Main {
 									//check if custom arguments are provided
 									double beta1 = 0.9;
 									double beta2 = 0.999;
-									if (s.length >= 7) {
-										if (s[6].equals("custom")) {
+									if (s.length >= 8) {
+										if (s[7].equals("custom")) {
 											//use custom beta values
 											ind++;
 											Output("enter the beta1 value: ");
@@ -521,9 +546,19 @@ class Main {
 							}
 							System.out.println();
 							nn.displayAccuracy = false;
-							String lossFunction = s[4];
+							String lossFunction = s[5];
 							lossFunction = lossFunction.equals("cce") ? "categorical_crossentropy" : lossFunction;
-							nn.Train(inputs, outputs, Integer.parseInt(s[2]), Double.parseDouble(s[3]), batchSize, lossFunction, decay, optimizer, null);
+							double splitRatio = Double.parseDouble(s[2]);
+							splitRatio = Math.min(1, Math.max(1.0 / inputs.length, splitRatio));
+							double[][] trainInputs = Arrays.copyOfRange(inputs, 0,
+									(int) (inputs.length * splitRatio));
+							double[][] testInputs = Arrays.copyOfRange(inputs, (int) (inputs.length * splitRatio),
+									inputs.length);
+							double[][] trainOutputs = Arrays.copyOfRange(outputs, 0,
+									(int) (outputs.length * splitRatio));
+							double[][] testOutputs = Arrays.copyOfRange(outputs, (int) (outputs.length * splitRatio),
+									outputs.length);
+							nn.Train(trainInputs, trainOutputs, testInputs, testOutputs, Integer.parseInt(s[3]), Double.parseDouble(s[4]), batchSize, lossFunction, decay, optimizer, null);
 						}
 					} catch(FileNotFoundException e) {
 						Output("file not found");
@@ -639,7 +674,16 @@ class Main {
 					mnistOutputs = null;
 					mnistInitialized = false;
 					SIZE = 0;
-					initMnist(Math.min(Integer.parseInt(s[1]), 60000), "data/train-images.idx3-ubyte", "data/train-labels.idx1-ubyte");
+					if (s.length > 2) {
+						//check if 'augmented' modifier is present
+						if (s[2].equals("augmented")) {
+							//augment the dataset by applying affine transformations
+							initMnist(Math.min(Integer.parseInt(s[1]), 60000), "data/train-images.idx3-ubyte",
+									"data/train-labels.idx1-ubyte", true);
+							continue;
+						}
+					}
+					initMnist(Math.min(Integer.parseInt(s[1]), 60000), "data/train-images.idx3-ubyte", "data/train-labels.idx1-ubyte", false);
 				} else if(s[0].equals("magnitude")) {
 					double avgBias = 0, minBias = Double.MAX_VALUE, maxBias = Double.MIN_VALUE;	
 					double[][] biases = nn.GetBiases();
@@ -707,13 +751,13 @@ class Main {
 						} else if(s[1].equals("mutate")) {
 							Output("syntax: mutate [mutation chance decimal] [variation]\nmutates neural network to simulate evolution. useful for genetic algorithms");
 						} else if(s[1].equals("train")) {
-							Output("syntax: train [training data file path/'mnist'] [epochs] [learning rate] [loss function] [optimizer] [optional: 'custom', for custom optimizer hyperparameters] [optional: batch size, default=input size] [optional: decay rate, default=0] [optional: clip threshold, default=1]\ntrains neural network on specified training data or mnist dataset based on specified hyperparameters and optimizer\n\nloss function choices are\n    - mse\n    - sse\n    - categorical_crossentropy\n\noptimizer choices are:\n    - sgd\n    - sgdmomentum (momentum, default=0.9)\n    - adagrad\n    - rmsprop (decay rate, default=0.9)\n    - adam (beta1, default=0.9) (beta2, default=0.999)\n\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
+							Output("syntax: train [data file path/'mnist'] [train/test split ratio, number between 0 and 1] [epochs] [learning rate] [loss function] [optimizer] [optional: 'custom', for custom optimizer hyperparameters] [optional: batch size, default=input size] [optional: decay rate, default=0] [optional: clip threshold, default=1]\ntrains neural network on specified training/test data or mnist dataset based on specified hyperparameters and optimizer\n\nloss function choices are\n    - mse\n    - sse\n    - categorical_crossentropy\n\noptimizer choices are:\n    - sgd\n    - sgdmomentum (momentum, default=0.9)\n    - adagrad\n    - rmsprop (decay rate, default=0.9)\n    - adam (beta1, default=0.9) (beta2, default=0.999)\n\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("cost")) {
 							Output("syntax: cost [test data file path] [loss function] or cost mnist\nreturns the average cost of the neural network for the specified dataset or the accuracy percentage for the mnist dataset. loss function choices are\n    - mse\n    - sse\n    - categorical_crossentropy\ntest data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("help")) {
 							Output("syntax: help [optional: command name]\nhelp command");
 						} else if(s[1].equals("mnist")) {
-							Output("syntax: mnist [# of cases]\ninitializes the mnist dataset with the specified # of cases. up to 60,000");
+							Output("syntax: mnist [# of cases] [optional 'augmented'] OR syntax: mnist test\ninitializes the mnist dataset with the specified # of cases. up to 60,000. An optional 'augmented' modifier can be specified that applies random affine transformations to the data to make training more robust. OR, allows users to test the network on custom user-drawn digits");
 						} else if(s[1].equals("magnitude")) {
 							Output("syntax: magnitude\ndisplays the magnitude of the network's parameters. Shows min/max/average weights and biases");
 						} else {
@@ -751,16 +795,90 @@ class Main {
 
 	static int indexOf(double[] arr, double v) {
 		int index = -1;
-		for(int i = 0; i < arr.length; i++) {
-			if(arr[i] == v) {
+		for (int i = 0; i < arr.length; i++) {
+			if (arr[i] == v) {
 				index = i;
 				return index;
 			}
 		}
 		return index;
 	}
+	
+	static void testMnist(NeuralNetwork nn) {
+		JFrame frame = new JFrame("Draw Image");
+		JLabel[] labels = new JLabel[10];
+		final RealTimeSoftDrawCanvas drawCanvas = new RealTimeSoftDrawCanvas();
 
-	static void initMnist(int numCases, String dataFilePath, String labelFilePath) {
+		frame = new JFrame("Draw Image");
+		drawCanvas.clearCanvas();
+		JButton clearButton = new JButton("Clear");
+
+		clearButton.addActionListener(e -> drawCanvas.clearCanvas());
+
+		JPanel panel = new JPanel();
+		panel.setLayout(new BorderLayout());
+		
+		JPanel content = new JPanel();
+		GridLayout contentLayout = new GridLayout(1, 2);
+		contentLayout.setHgap(20);
+		content.setLayout(contentLayout);
+		content.add(drawCanvas);
+
+		JPanel labelsPanel = new JPanel();
+		//list of labels from 0-9 with listed probabilities
+		labelsPanel.setLayout(new GridLayout(10, 1));
+		Font font = new Font("Arial", Font.PLAIN, 20);
+		for (int i = 0; i < 10; i++) {
+			JLabel l = new JLabel(i + ": 0.00%");
+			l.setFont(font);
+			labelsPanel.add(l);
+			labels[i] = l;
+		}
+		//add padding on right
+		content.add(labelsPanel);
+
+		JPanel controls = new JPanel();
+		controls.add(clearButton);
+		panel.add(content, BorderLayout.CENTER);
+		panel.add(controls, BorderLayout.SOUTH);
+		frame.setContentPane(panel);
+		frame.pack();
+		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		frame.setVisible(true);
+
+		while (frame.isVisible()) {
+			//evaluate the image and display the output
+			double[][] inputRaw = drawCanvas.getPixelArray();
+			//flatten the array
+			double[] input = new double[inputRaw.length * inputRaw[0].length];
+			for (int i = 0; i < inputRaw.length; i++) {
+				for (int j = 0; j < inputRaw[0].length; j++) {
+					input[i * inputRaw[0].length + j] = inputRaw[i][j];
+				}
+			}
+			double[] output = nn.Evaluate(input);
+			//find the highest probability
+			int maxIndex = 0;
+			for (int i = 0; i < 10; i++) {
+				if (output[i] > output[maxIndex]) {
+					maxIndex = i;
+				}
+			}
+			for (int i = 0; i < 10; i++) {
+				//highlight the highest probability
+				if (i == maxIndex) {
+					labels[i].setForeground(Color.RED);
+				} else {
+					labels[i].setForeground(Color.BLACK);
+				}
+				labels[i].setText(i + ": " + String.format("%.2f", output[i] * 100) + "%");
+			}
+		}
+		//the realtimesoftdrawcanvas object has a timer that needs to be stopped
+		drawCanvas.stopTimer();
+	}
+
+	static void initMnist(int numCases, String dataFilePath, String labelFilePath, boolean doAugment) {
 		mnistInitialized = true;
 		
 		try {
@@ -783,11 +901,34 @@ class Main {
 	        for(int i = 0; i < SIZE; i++) {
 	            mnistLabels[i] = (labelInputStream.readUnsignedByte());
 				mnistOutputs[i][mnistLabels[i]] = 1;
-	            for (int r = 0; r < nRows*nCols; r++) {
-	                mnistImages[i][r] = dataInputStream.readUnsignedByte();
-	            }
-				progressBar(30, "parsing MNIST", i+1, SIZE);
-	        }
+				if (doAugment) {
+					double[] imgFlat = new double[nRows * nCols];
+					for (int r = 0; r < nRows * nCols; r++) {
+						imgFlat[r] = dataInputStream.readUnsignedByte();
+					}
+					double[][] img = new double[nRows][nCols];
+					for (int r = 0; r < nRows; r++) {
+						for (int c = 0; c < nCols; c++) {
+							img[r][c] = imgFlat[r * nCols + c] / 255.0;
+						}
+					}
+					//augment image
+					img = scale(img, (Math.random() * 0.4 + 0.65));
+					img = shift(img, (int) (Math.random() * 10 - 5), (int) (Math.random() * 10 - 5));
+					img = rotate(img, (int) (Math.random() * 50 - 25));
+					//flatten image
+					for (int r = 0; r < nRows; r++) {
+						for (int c = 0; c < nCols; c++) {
+							mnistImages[i][r * nCols + c] = img[r][c];
+						}
+					}
+				} else {
+					for (int r = 0; r < nRows * nCols; r++) {
+						mnistImages[i][r] = dataInputStream.readUnsignedByte() / 255.0;
+					}
+				}
+				progressBar(30, "parsing MNIST", i + 1, SIZE);
+			}
 			System.out.println();
 	        dataInputStream.close();
 	        labelInputStream.close();
@@ -799,17 +940,106 @@ class Main {
 		}
 	}
 
-	static void showImage(double[] image, int width, int height) {
+	public static void showImage(double[] image, int width, int height) {
 		String filled = "██";
 		String unfilled = "░░";
-		for(int i = 0; i < height; i++) {
+		for (int i = 0; i < height; i++) {
 			String line = "";
-			for(int j = 0; j < width; j++) {
-				line += image[width*i+j] >= 0.5 ? filled : unfilled;
+			for (int j = 0; j < width; j++) {
+				line += image[width * i + j] >= 0.5 ? filled : unfilled;
 			}
 			Output(line);
 		}
 	}
+	
+	public static void showImage(double[][] image) {
+		String filled = "██";
+		String unfilled = "░░";
+		for(int i = 0; i < image.length; i++) {
+			String line = "";
+			for(int j = 0; j < image[0].length; j++) {
+				line += image[i][j] >= 0.5 ? filled : unfilled;
+			}
+			Output(line);
+		}
+	}
+
+	public static double[][] shift(double[][] image, int shiftX, int shiftY) {
+		int width = image.length;
+		int height = image[0].length;
+		double[][] shiftedImage = new double[width][height];
+	
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+				int newX = x + shiftX;
+				int newY = y + shiftY;
+				if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
+					shiftedImage[newX][newY] = image[x][y];
+				}
+			}
+		}
+		return shiftedImage;
+	}
+
+	public static double[][] rotate(double[][] image, double angle) {
+		int width = image.length;
+		int height = image[0].length;
+		double[][] rotatedImage = new double[width][height];
+		double radians = Math.toRadians(angle);
+		int centerX = width / 2;
+		int centerY = height / 2;
+	
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+				int newX = (int) ((x - centerX) * Math.cos(radians) - (y - centerY) * Math.sin(radians) + centerX);
+				int newY = (int) ((x - centerX) * Math.sin(radians) + (y - centerY) * Math.cos(radians) + centerY);
+				if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
+					rotatedImage[newX][newY] = image[x][y];
+				}
+			}
+		}
+		return rotatedImage;
+	}
+
+	public static double[][] scale(double[][] image, double scaleFactor) {
+		int width = image.length;
+		int height = image[0].length;
+		double[][] scaledImage = new double[width][height];
+		
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+				// Calculate the original coordinates
+				double origX = (x - width / 2.0) / scaleFactor + width / 2.0;
+				double origY = (y - height / 2.0) / scaleFactor + height / 2.0;
+				
+				// Interpolate pixel value
+				scaledImage[x][y] = interpolatePixel(image, origX, origY);
+			}
+		}
+		return scaledImage;
+	}
+	
+	private static double interpolatePixel(double[][] image, double x, double y) {
+		int x1 = (int) Math.floor(x);
+		int y1 = (int) Math.floor(y);
+		int x2 = x1 + 1;
+		int y2 = y1 + 1;
+	
+		if (x1 >= 0 && x2 < image.length && y1 >= 0 && y2 < image[0].length) {
+			double Q11 = image[x1][y1];
+			double Q12 = image[x1][y2];
+			double Q21 = image[x2][y1];
+			double Q22 = image[x2][y2];
+	
+			double R1 = ((x2 - x) / (x2 - x1)) * Q11 + ((x - x1) / (x2 - x1)) * Q21;
+			double R2 = ((x2 - x) / (x2 - x1)) * Q12 + ((x - x1) / (x2 - x1)) * Q22;
+	
+			return ((y2 - y) / (y2 - y1)) * R1 + ((y - y1) / (y2 - y1)) * R2;
+		} else {
+			return 0;
+		}
+	}
+	
 
 	public static void sleep(int milliseconds) {
 		try {

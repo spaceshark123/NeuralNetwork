@@ -52,7 +52,8 @@ public class NeuralNetwork implements Serializable {
 
 	// Callback interface for training updates
 	public static interface TrainingCallback {
-		void onEpochUpdate(int epoch, int batch, double progress, double accuracy);
+		//test accuracy is assigned -1 if not available for the current mini-batch
+		void onEpochUpdate(int epoch, int batch, double progress, double trainAccuracy, double testAccuracy);
 	}
 
 	public static interface Optimizer {
@@ -1106,16 +1107,28 @@ public class NeuralNetwork implements Serializable {
 		return Math.max(min, Math.min(max, value));
 	}
 
-	//uses SGD (stochastic gradient descent)
-	public void Train(double[][] inputs, double[][] outputs, int epochs, double learningRate, int batchSize,
+	public double evaluateAccuracy(double[][] inputs, double[][] outputs) {
+        int numCorrect = 0;
+        for (int i = 0; i < inputs.length; i++) {
+            double[] predicted = Evaluate(inputs[i]); // Predict the output for each input
+            int prediction = indexOf(predicted, max(predicted));
+            int actual = indexOf(outputs[i], max(outputs[i]));
+            if (prediction == actual) {
+                numCorrect++;
+            }
+        }
+        return (double) numCorrect / inputs.length;
+    }
+
+	public void Train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs, double learningRate, int batchSize,
 			String lossFunction, double decay, Optimizer optimizer, TrainingCallback callback) {
 		double lr = learningRate;
 		//list of indices for data points, will be randomized in each epoch
 		if (batchSize == -1) {
-			batchSize = inputs.length;
+			batchSize = trainX.length;
 		}
-		List<Integer> indices = new ArrayList<Integer>(inputs.length);
-		for (int i = 0; i < inputs.length; i++) {
+		List<Integer> indices = new ArrayList<Integer>(trainX.length);
+		for (int i = 0; i < trainX.length; i++) {
 			indices.add(i);
 		}
 		//initial shuffle
@@ -1126,9 +1139,9 @@ public class NeuralNetwork implements Serializable {
 		final double weightedAvg = 1.0 / (double) batchSize;
 		int epoch = 0;
 		double progress = 0; // marks the epoch and progress through current epoch as decimal
-		final int batchesPerEpoch = (int) Math.ceil((double) inputs.length / batchSize);
+		final int batchesPerEpoch = (int) Math.ceil((double) trainX.length / batchSize);
 		int epochIteration = 0;
-		if (inputs.length % batchSize != 0) {
+		if (trainX.length % batchSize != 0) {
 			//batches wont divide evenly into samples
 			System.out.println("warning: training data size is not divisible by sample size");
 		}
@@ -1148,6 +1161,15 @@ public class NeuralNetwork implements Serializable {
 			}
 			return gradients;
 		});
+		//initialize accuracies
+		double initialTrainAccuracy = 100 * evaluateAccuracy(trainX, trainY);
+		double initialTestAccuracy = 100 * evaluateAccuracy(testX, testY);
+		//round to 2 decimal
+		initialTrainAccuracy = Math.round(initialTrainAccuracy * 100.0) / 100.0;
+		initialTestAccuracy = Math.round(initialTestAccuracy * 100.0) / 100.0;
+		if (callback != null) {
+			callback.onEpochUpdate(0, 0, 0, initialTrainAccuracy, initialTestAccuracy);
+		}
 		AtomicInteger numCorrect = new AtomicInteger(0);
 		// Initialize batchIndices once
 		ArrayList<Integer> batchIndices = new ArrayList<>(batchSize);
@@ -1164,13 +1186,13 @@ public class NeuralNetwork implements Serializable {
 			batchIndices.clear();
 			// Use System.arraycopy for faster copying
 			int endIndex = currentInd + batchSize;
-			if (endIndex <= inputs.length) {
+			if (endIndex <= trainX.length) {
 				// If the batch does not wrap around the end of the list
 				batchIndices.addAll(indices.subList(currentInd, endIndex));
 			} else {
 				// If the batch wraps around the end of the list
 				int wrapAroundIndex = endIndex % indices.size();
-				batchIndices.addAll(indices.subList(currentInd, inputs.length));
+				batchIndices.addAll(indices.subList(currentInd, trainX.length));
 				batchIndices.addAll(indices.subList(0, wrapAroundIndex));
 			}
 
@@ -1199,12 +1221,12 @@ public class NeuralNetwork implements Serializable {
 				double[][][] thisWeightGradient = threadLocalWeightGradient.get();
 
 				// Calculate predicted output
-				double[] predicted = Evaluate(inputs[caseInd], thisNeurons, thisNeuronsRaw);
+				double[] predicted = Evaluate(trainX[caseInd], thisNeurons, thisNeuronsRaw);
 
 				// If this is a classification network, count the number correct
 				if (displayAccuracy) {
 					int prediction = indexOf(predicted, max(predicted));
-					int actual = indexOf(outputs[caseInd], max(outputs[caseInd]));
+					int actual = indexOf(trainY[caseInd], max(trainY[caseInd]));
 					if (prediction == actual) {
 						numCorrect.incrementAndGet();
 					}
@@ -1222,7 +1244,7 @@ public class NeuralNetwork implements Serializable {
 
 				// Do backpropagation
 				Backpropagate(thisNeurons, thisNeuronsRaw, thisBiasGradient, thisWeightGradient, predicted,
-						outputs[caseInd], 1, lossFunction);
+						trainY[caseInd], 1, lossFunction);
 
 				// Do weighted sum of gradients for average
 				for (int i = 1; i < numLayers; i++) {
@@ -1257,22 +1279,32 @@ public class NeuralNetwork implements Serializable {
 			double batchTime = (double)((endTime - startTime) / 1000.0);
 			avgBatchTime += batchTime;
 			currentInd += batchSize;
-			if (currentInd >= inputs.length) {
+			boolean newEpoch = false;
+			if (currentInd >= trainX.length) {
 				//new epoch
+				newEpoch = true;
 				currentInd = 0;
 				epoch++;
 				Collections.shuffle(indices);
 			}
-			progress = epoch + currentInd / (double) inputs.length;
+			progress = epoch + currentInd / (double) trainX.length;
 			if (displayAccuracy) {
-				double accuracy = 100 * ((double) numCorrect.get() * weightedAvg);
-				//round to one decimal
-				accuracy = Math.round(accuracy * 100.0) / 100.0;
+				//calculate train accuracy
+				double trainAccuracy = 100 * ((double) numCorrect.get() * weightedAvg);
+				//round to 2 decimal
+				trainAccuracy = Math.round(trainAccuracy * 100.0) / 100.0;
+				//calculate test accuracy if new epoch
+				double testAccuracy = -1;
+				if (newEpoch) {
+					testAccuracy = 100 * evaluateAccuracy(testX, testY);
+					//round to 2 decimal
+					testAccuracy = Math.round(testAccuracy * 100.0) / 100.0;
+				}
 				if (callback != null) {
-					callback.onEpochUpdate(epoch + 1, epochIteration + 1, progress, accuracy);
+					callback.onEpochUpdate(epoch + 1, epochIteration + 1, progress, trainAccuracy, testAccuracy);
 				}
 				progressBar(30, "Training", epoch + 1, epochs,
-						(epochIteration + 1) + "/" + batchesPerEpoch + " accuracy: " + accuracy + "%");
+						(epochIteration + 1) + "/" + batchesPerEpoch + " accuracy: " + trainAccuracy + "%");
 			} else {
 				progressBar(30, "Training", epoch + 1, epochs, (epochIteration + 1) + "/" + batchesPerEpoch);
 			}
@@ -1280,6 +1312,26 @@ public class NeuralNetwork implements Serializable {
 		avgBatchTime /= (iteration + 1);
 		System.out.println();
 		System.out.println("average batch time: " + avgBatchTime + " seconds");
+	}
+
+	public void Train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs, double learningRate, int batchSize,
+			String lossFunction, double decay, Optimizer optimizer) {
+		Train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
+	}
+
+	public void Train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs, double learningRate, int batchSize,
+			String lossFunction, double decay) {
+		Train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, decay, new OptimizerType.SGD());
+	}
+
+	public void Train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs, double learningRate, int batchSize,
+			String lossFunction) {
+		Train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, 0);
+	}
+
+	public void Train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs, double learningRate, int batchSize,
+			String lossFunction, Optimizer optimizer) {
+		Train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, 0, optimizer);
 	}
 
 	void progressBar(int width, String title, int current, int total, String subtitle) {

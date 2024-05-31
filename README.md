@@ -18,7 +18,11 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 ## Key Features
 
+- **User-friendly Console Interface**: Everything is wrapped in an easy-to-use console interface using commands to perform tasks, similar to a shell terminal. This allows for no-code experimentation with neural networks.
+
 - **Realtime Accuracy Graph While Training**: Displays realtime graph of accuracy over epochs for mnist networks while training, allowing users to visualize improvements as they occur.
+
+- **Realtime MNIST Drawing Tool**: Includes a drawing tool that allows users to draw on a 28x28 canvas and recieve realtime predictions by the network of which MNIST digit it is. This allows for easy debugging and evaluation.
 
 - **Parallelism and Multithreading**: Uses parallel computing and multithreading to dramatically accelerate computation time for evaluation and training mini-batches.
 
@@ -34,7 +38,11 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 - **Weight Initialization**: Utilizes weight initialization techniques like Xavier (for linear, sigmoid, and tanh) and He (for relu) for better convergence.
 
+- **Data Augmentation**: Includes option to augment MNIST dataset on import, which performs random affine transformations (translation, rotation, scaling) to increase generalizability of networks.
+
 - **Training**: Train your neural network using mini-batched Gradient Descent (SGD) with customizable optimizer, loss function, learning rate, mini-batch size, and learning rate decay.
+
+- **Train/Test Set Cross-Validation**: During training, train and test set accuracy are measured for each mini-batch, ensuring a complete picture of network performance and prevention of overfitting. The console interface allows users to specify a train/test split ratio.
 
 - **Gradient Clipping**: Helps prevent exploding gradients during training by setting a gradient clipping threshold.
 
@@ -55,11 +63,14 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
    network.Init(0.1); //initializes weights and biases according to spread amount
    ```
 
-2. **Training**: Train the neural network using your dataset and desired hyperparameters, taking advantage of multiple CPU cores to speed up training time.
+2. **Training**: Train the neural network using your train and test/validation datasets and desired hyperparameters, taking advantage of multiple CPU cores to speed up training time.
 
    ```java
-   double[][] inputs = // Your input data
-   double[][] outputs = // Your output data
+   double[][] trainInputs = {...};
+   double[][] trainOutputs = {...};
+
+   double[][] testInputs = {...};
+   double[][] testOutputs = {...};
    int epochs = 100;
    double learningRate = 0.01;
    int batchSize = 32;
@@ -72,7 +83,7 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
    network.SetRegularizationLambda(0.001);
    NeuralNetwork.Optimizer optimizer = new NeuralNetwork.OptimizerType.Adam(0.9, 0.999); //specify optimizer for training
    //train the network with no callback
-   network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
+   network.Train(trainInputs, trainOutputs, testInputs, testOutputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
    ```
 
 	optimizers are of type `NeuralNetwork.Optimizer` and included optimizers are found in `NeuralNetwork.OptimizerType`. Included optimizers are:
@@ -91,8 +102,9 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
 
 	```java
 	public class Callback implements NeuralNetwork.TrainingCallback {
+		//testAccuracy is -1 if the current mini-batch doesn't have a test accuracy
 		@Override
-		public void onEpochUpdate(int epoch, int batch, double progress, double accuracy) {
+		public void onEpochUpdate(int epoch, int batch, double progress, double trainAccuracy, double testAccuracy) {
 			System.out.println("this statement is run for every mini-batch in training");
 		}
 	}
@@ -269,7 +281,7 @@ This will launch the program's custom console, allowing you to control and modif
 
 - `mutate`: Mutate the parameters of the network for a genetic algorithm/implementation
 
-- `mnist`: Initialize/import the MNIST dataset for use in training/evaluating
+- `mnist`: Initialize/import the MNIST dataset for use in training/evaluating or draw your own handwritten digits for the network to evaluate in realtime.
 
 - `info`: Display information about the neural network's parameters
 
@@ -297,7 +309,7 @@ This will launch the program's custom console, allowing you to control and modif
 
 - For evaluation, use the evaluate command, and input the data you want to predict on, or `mnist [case #]`
 
-- The mnist dataset has been built into the program to allow for building/evaluating hand-drawn digit recognition networks directly using the console and recieving a realtime accuracy visualization to assist with training. mnist networks MUST HAVE input size __784__ and output size __10__. In the majority of cases, the output layer has __softmax__ activation and is trained using the __categorical_crossentropy__ loss function.
+- The mnist dataset has been built into the program to allow for building/evaluating hand-drawn digit recognition networks directly using the console and recieving a realtime accuracy visualization to assist with training. You can run `mnist test` to draw your own hand-written digits for the network to evaluate in realtime. the `mnist` command to import the MNIST dataset has an optional `augmented` modifier to randomly apply affine transformations to the data, making the network more generalizable at the cost of some accuracy and convergence  speed. mnist networks MUST HAVE input size __784__ and output size __10__. In the majority of cases, the output layer has __softmax__ activation and is trained using the __categorical_crossentropy__ loss function.
 
 #### Save and Load Models:
 
@@ -325,5 +337,6 @@ A few neural networks and their training sets have been pre-included into the pr
 - `SavedNetwork2`: deep neural network to add 2 numbers (object mode)
 - `TrainSet1`: training/test dataset for adding 2 numbers (can be used for `SavedNetwork1` and `SavedNetwork2`) (object mode)
 - `MNISTNetwork`: an untrained neural network with the correct topology to evaluate MNIST cases (digit recognition). accuracy ≈ 10.61% (object mode)
-- `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition) with near perfect accuracy. accuracy ≈ 99.94% (object mode)
+- `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition) with high, generalized accuracy from training on an augmented data set. Good for testing your own digits. accuracy ≈ 98.14% (object mode)
 - `MNISTParams`: same as `MNISTNetworkTrained`, but as plain text (parameters mode)
+- `MNISTNetworkOverfitted`: a neural network that has been trained excessively, making it overfit to the MNIST dataset. Bad for testing your own digits. accuracy ≈ 99.94% (object mode)
