@@ -278,8 +278,8 @@ public class NeuralNetwork implements Serializable {
 	protected double lambda = 0;
 	protected RegularizationType regularizationType = RegularizationType.NONE;
 	//used in gradient descent
-	volatile private double[][] avgBiasGradient;
-	volatile private double[][][] avgWeightGradient;
+	volatile protected double[][] avgBiasGradient;
+	volatile protected double[][][] avgWeightGradient;
 	protected Random r;
 
 	//takes in int[] for number of neurons in each layer and string[] for activations of each layer
@@ -559,15 +559,9 @@ public class NeuralNetwork implements Serializable {
 			case "sigmoid":
 				double sigmoidVal = sigmoid_activation(raw);
 				val = sigmoidVal * (1 - sigmoidVal);
-				if (Double.isNaN(val)) {
-					System.out.println("NaN error in sigmoid activation der");
-				}
 				return val;
 			case "tanh":
 				val = Math.pow(1d / Math.cosh(raw), 2);
-				if (Double.isNaN(val)) {
-					System.out.println("NaN error in tanh activation der");
-				}
 				return val;
 			case "relu":
 				if (raw <= 0) {
@@ -579,9 +573,6 @@ public class NeuralNetwork implements Serializable {
 				return 0;
 			case "softmax":
 				val = softmax_der(Arrays.copyOfRange(neuronsRaw[layer], 0, neuronsPerLayer[layer]), index);
-				if (Double.isNaN(val)) {
-					System.out.println("NaN error in softmax activation der");
-				}
 				return val;
 			default:
 				return 1;
@@ -596,15 +587,9 @@ public class NeuralNetwork implements Serializable {
 			case "sigmoid":
 				double sigmoidVal = sigmoid_activation(raw);
 				val = sigmoidVal * (1 - sigmoidVal);
-				if (Double.isNaN(val)) {
-					System.out.println("NaN error in sigmoid activation der");
-				}
 				return val;
 			case "tanh":
 				val = Math.pow(1d / Math.cosh(raw), 2);
-				if (Double.isNaN(val)) {
-					System.out.println("NaN error in tanh activation der");
-				}
 				return val;
 			case "relu":
 				if (raw <= 0) {
@@ -616,9 +601,6 @@ public class NeuralNetwork implements Serializable {
 				return 0;
 			case "softmax":
 				val = softmax_der(neuronsRaw, index);
-				if (Double.isNaN(val)) {
-					System.out.println("NaN error in softmax activation der");
-				}
 				return val;
 			default:
 				return 1;
@@ -1007,20 +989,10 @@ public class NeuralNetwork implements Serializable {
 	//error functions derivative
 	double cost_der(double predicted, double expected, String lossFunction) {
 		if (lossFunction.equals("sse")) {
-			if (Double.isNaN(predicted - expected)) {
-				System.out.println("NaN error in cost derivative sse");
-			}
 			return predicted - expected;
 		} else if (lossFunction.equals("mse")) {
-			if (Double.isNaN((2.0 * (predicted - expected)) / neuronsPerLayer[numLayers - 1])) {
-				System.out.println("NaN error in cost derivative mse");
-			}
 			return (2.0 * (predicted - expected)) / neuronsPerLayer[numLayers - 1];
 		} else if (lossFunction.equals("categorical_crossentropy")) {
-			if (Double.isNaN(-expected / (Math.max(predicted, 1.0e-15)))) {
-				System.out.println("NaN error in cost derivative crossentropy: expected: " + expected + " predicted: "
-						+ predicted);
-			}
 			return -expected / (predicted + 1.0e-15);
 		}
 		return 1;
@@ -1044,30 +1016,9 @@ public class NeuralNetwork implements Serializable {
 					neuronGradients[i] = cost_der(predicted[i], expected[i], lossFunction)
 							* activate_der(neuronsRaw[layer][i], layer, neuronsRaw[layer], i);
 				}
-				if (Double.isNaN(neuronGradients[i])) {
-					System.out.println("Nan error in neuron gradient of last layer. try reducing the learning rate");
-					throw new ArithmeticException("NaN error");
-				}
 				biasGrad[layer][i] = 1 * neuronGradients[i];
-				if (Double.isNaN(biasGrad[layer][i])) {
-					System.out.println("Nan error in bias of last layer. try reducing the learning rate");
-					throw new ArithmeticException("NaN error");
-				}
 				for (int j = 0; j < neuronsPerLayer[layer - 1]; j++) {
 					weightGrad[layer][i][j] = neuronGradients[i] * neurons[layer - 1][j];
-					if (Double.isNaN(neurons[layer - 1][j])) {
-						System.out.println(
-								"Nan error in neuron value of second to last layer. try reducing the learning rate");
-					}
-					if (Double.isNaN(weightGrad[layer][i][j])) {
-						System.out.println(
-								"Nan error in weight of last layer. try reducing the learning rate: neuronGradient: "
-										+ neuronGradients[i] + " neuron: " + neurons[layer - 1][j] + " cost der: "
-										+ cost_der(predicted[i], expected[i], lossFunction) + " activate der: "
-										+ activate_der(neuronsRaw[layer][i], layer, i) + " predicted: " + predicted[i]
-										+ " expected: " + expected[i]);
-						throw new ArithmeticException("NaN error");
-					}
 				}
 			}
 			return neuronGradients;
@@ -1085,17 +1036,9 @@ public class NeuralNetwork implements Serializable {
 				nextLayerWeightedSum[i] += nextLayerBackpropagate[j] * weights[layer + 1][j][i];
 			}
 			neuronGradients[i] = activate_der(neuronsRaw[layer][i], layer, i) * nextLayerWeightedSum[i];
-			biasGrad[layer][i] = 1 * nextLayerSum;
-			if (Double.isNaN(biasGrad[layer][i])) {
-				System.out.println("Nan error in bias. try reducing the learning rate");
-				throw new ArithmeticException("NaN error");
-			}
+			biasGrad[layer][i] = nextLayerSum;
 			for (int j = 0; j < neuronsPerLayer[layer - 1]; j++) {
 				weightGrad[layer][i][j] = neuronGradients[i] * neurons[layer - 1][j];
-				if (Double.isNaN(weightGrad[layer][i][j])) {
-					System.out.println("Nan error in weight. try reducing the learning rate");
-					throw new ArithmeticException("NaN error");
-				}
 			}
 		}
 
@@ -1177,6 +1120,7 @@ public class NeuralNetwork implements Serializable {
 		for (int i = 0; i < batchSize; i++) {
 			batchIndices.add(0); // pre-fill with dummy values to avoid resizing
 		}
+		long startTime = System.currentTimeMillis();
 		for (; epoch < epochs; iteration++) {
 			//do epoch batch stuff (iteration is the current cumulative batch iteration)
 			epochIteration = iteration % batchesPerEpoch;
@@ -1208,7 +1152,6 @@ public class NeuralNetwork implements Serializable {
 					}
 				}
 			}
-			long startTime = System.currentTimeMillis();
 
 			// Parallelize this loop
 			IntStream.range(0, batchSize).parallel().forEach(a -> {
@@ -1275,9 +1218,6 @@ public class NeuralNetwork implements Serializable {
 				}
 			}
 			optimizer.step(avgBiasGradient, avgWeightGradient, lr);
-			long endTime = System.currentTimeMillis();
-			double batchTime = (double)((endTime - startTime) / 1000.0);
-			avgBatchTime += batchTime;
 			currentInd += batchSize;
 			boolean newEpoch = false;
 			if (currentInd >= trainX.length) {
@@ -1309,7 +1249,8 @@ public class NeuralNetwork implements Serializable {
 				progressBar(30, "Training", epoch + 1, epochs, (epochIteration + 1) + "/" + batchesPerEpoch);
 			}
 		}
-		avgBatchTime /= (iteration + 1);
+		long endTime = System.currentTimeMillis();
+		avgBatchTime = (endTime - startTime) / (1000.0 * (iteration + 1));
 		System.out.println();
 		System.out.println("average batch time: " + avgBatchTime + " seconds");
 	}
@@ -1342,7 +1283,7 @@ public class NeuralNetwork implements Serializable {
 			//set progress bar
 			int fillAmount = (int) Math.ceil(fill * width);
 			StringBuilder bar = new StringBuilder();
-			bar.append(title).append(": ").append(filled.repeat(fillAmount)).append(unfilled.repeat(width - fillAmount)).append(" ").append(current).append("/").append(total).append(" ").append(subtitle).append(" ").append("\r");
+			bar.append(title).append(": ").append(filled.repeat(fillAmount)).append(unfilled.repeat(width - fillAmount)).append(" ").append(current).append("/").append(total).append(" ").append(subtitle).append("      ").append("\r");
 			System.out.print(bar.toString());
 		}
 	}
