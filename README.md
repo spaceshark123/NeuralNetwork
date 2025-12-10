@@ -1,5 +1,4 @@
 
-
 # Neural Network in Java
 
 This project provides a flexible and extensible implementation of a multithreaded feedforward neural network in Java with popular optimizers included, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use and customize, making it a valuable tool for various machine learning and deep learning tasks. This was made without any external machine learning, math, or other libraries to aid in its creation (pure Java, at least for the base class).
@@ -52,7 +51,7 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 ## Internal Usage
 
-For use in your own Java projects, simply import the `NeuralNetwork.java` class file and it will immediately be usable. The following section covers the proper syntax for 
+For use in your own Java projects, simply import the `NeuralNetwork.java` class file and it will immediately be usable. The following section covers the proper syntax for
 
 1. **Initialize the Neural Network**: Create a neural network by specifying the topology (number of neurons in each layer) and activation functions.
 
@@ -86,139 +85,134 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
    network.Train(trainInputs, trainOutputs, testInputs, testOutputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
    ```
 
-	optimizers are of type `NeuralNetwork.Optimizer` and included optimizers are found in `NeuralNetwork.OptimizerType`. Included optimizers are:
+ optimizers are of type `NeuralNetwork.Optimizer` and included optimizers are found in `NeuralNetwork.OptimizerType`. Included optimizers are:
 
-	- `SGD()`
+ - `SGD()`
 
-	- `SGDMomentum(double momentum)`
+ - `SGDMomentum(double momentum)`
 
-	- `AdaGrad()`
+ - `AdaGrad()`
 
-	- `RMSProp(double decayRate)`
+ - `RMSProp(double decayRate)`
 
-	- `Adam(double beta1, double beta2)`
+ - `Adam(double beta1, double beta2)`
 
    Optionally, provide a custom training callback by passing in a class implementing the static `NeuralNetwork.TrainingCallback` interface as an argument. This can be used to make your own custom train addons like a graph visualization of the data. The `ChartUpdater` class has been provided to visualize accuracy data using this callback interface.
 
-	```java
-	public class Callback implements NeuralNetwork.TrainingCallback {
-		//testAccuracy is -1 if the current mini-batch doesn't have a test accuracy
-		@Override
-		public void onEpochUpdate(int epoch, int batch, double progress, double trainAccuracy, double testAccuracy) {
-			System.out.println("this statement is run for every mini-batch in training");
-		}
-	}
+ ```java
+ public class Callback implements NeuralNetwork.TrainingCallback {
+  //testAccuracy is -1 if the current mini-batch doesn't have a test accuracy
+  @Override
+  public void onEpochUpdate(int epoch, int batch, double progress, double trainAccuracy, double testAccuracy) {
+   System.out.println("this statement is run for every mini-batch in training");
+  }
+ }
 
-	class Main {
-		public static void main(String[] args) {
-			...
-			Callback callback = new Callback();
-			network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, callback);
-		}
-	}
-	```
+ class Main {
+  public static void main(String[] args) {
+   ...
+   Callback callback = new Callback();
+   network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, callback);
+  }
+ }
+ ```
 
-	Also, custom optimizers can be made by creating a class implementing the static `NeuralNetwork.Optimizer` interface. This can be used to create other optimizers not already included in the NeuralNetwork class.
+ Also, custom optimizers can be made by creating a class implementing the static `NeuralNetwork.Optimizer` interface. This can be used to create other optimizers not already included in the NeuralNetwork class.
 
-	```java
-	public static class CustomOptimizer implements Optimizer {
-		//assign to the elements of biases and weights in the step function
-		private double[][] biases;
-		private double[][][] weights;
-		private int[] neuronsPerLayer;
+ ```java
+ public static class CustomOptimizer implements Optimizer {
+  //assign to the elements of biases and weights in the step function
+  private double[][] biases;
+  private double[][][] weights;
+  private int[] neuronsPerLayer;
 
-		@Override
-		public void initialize(int[] neuronsPerLayer, double[][] biases, double[][][] weights) {
-			this.biases = biases;
-			this.weights = weights;
-			this.neuronsPerLayer = neuronsPerLayer;
-			//other initializations
-			...
-		}
+  @Override
+  public void initialize(int[] neuronsPerLayer, double[][] biases, double[][][] weights) {
+   this.biases = biases;
+   this.weights = weights;
+   this.neuronsPerLayer = neuronsPerLayer;
+   //other initializations
+   ...
+  }
 
-		@Override
-		public void step(double[][] avgBiasGradient, double[][][] avgWeightGradient, double learningRate) {
-			for (int i = 1; i < neuronsPerLayer.length; i++) {
-				for (int j = 0; j < neuronsPerLayer[i]; j++) {
-					//set biases
-					biases[i][j] = ...
-					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
-						//set weights
-						weights[i][j][k] = ...
-					}
-				}
-			}
-		}
-	}
-	```
+  @Override
+  public void step(double[][] avgBiasGradient, double[][][] avgWeightGradient, double learningRate) {
+   for (int i = 1; i < neuronsPerLayer.length; i++) {
+    for (int j = 0; j < neuronsPerLayer[i]; j++) {
+     //set biases
+     biases[i][j] = ...
+     for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
+      //set weights
+      weights[i][j][k] = ...
+     }
+    }
+   }
+  }
+ }
+ ```
 
 3. **Mutation**: Mutate the neural network for a genetic algorithm (evolution).
 
-	```java
-	network.Mutate(c, v); //mutates the network with chance c and variation v
-	```
+ ```java
+ network.Mutate(c, v); //mutates the network with chance c and variation v
+ ```
 
 5. **Evaluation**: Use the trained model to make predictions and evaluate the cost
 
-	  ```java
-	 double[] input = {...};
-	 double[] prediction = network.Evaluate(input);
-		
-	 double[] expected = {...};
-	 String lossFunction = "mse"; // or "sse" or "categorical_crossentropy"
-	 double cost = network.Cost(prediction, expected, lossFunction);
-	  ```
+   ```java
+  double[] input = {...};
+  double[] prediction = network.Evaluate(input);
+  
+  double[] expected = {...};
+  String lossFunction = "mse"; // or "sse" or "categorical_crossentropy"
+  double cost = network.Cost(prediction, expected, lossFunction);
+   ```
 
 6. **Save and Load**: Save the trained model to disk and load it for future use, either as a java object, which isn't human readable and doesn't transfer between programming languages but is faster, or a plain text file containing parameters, which is human readable and also transferrable between programming languages.
 
-	  ```java
-	  // Save the model as a java object
-	  NeuralNetwork.Save(network, "my_model_java.nn");
-	  // Load the model from a file formatted as a java object
-	  NeuralNetwork loadedNetwork = NeuralNetwork.Load("my_model_java.nn");
+   ```java
+   // Save the model as a java object
+   NeuralNetwork.Save(network, "my_model_java.nn");
+   // Load the model from a file formatted as a java object
+   NeuralNetwork loadedNetwork = NeuralNetwork.Load("my_model_java.nn");
 
-	  // Save the model as a plain text file
-	  NeuralNetwork.SaveParameters(network, "my_model.txt");
-	  // Load the model from a plain text file
-	  NetworkNetwork loadedTxtNetwork = NeuralNetwork.Load("my_model.txt");
-	  ```
+   // Save the model as a plain text file
+   NeuralNetwork.SaveParameters(network, "my_model.txt");
+   // Load the model from a plain text file
+   NetworkNetwork loadedTxtNetwork = NeuralNetwork.Load("my_model.txt");
+   ```
 
-	  The plain text file is separated into lines that each contain a unique set of parameters specified by the first token and followed by the corresponding values, all separated by spaces. For example, one line could contain: `topology 784 512 10`, which would translate to a neural network with 3 layers of those sizes. The headings and their specifications are as follows:
+   The plain text file is separated into lines that each contain a unique set of parameters specified by the first token and followed by the corresponding values, all separated by spaces. For example, one line could contain: `topology 784 512 10`, which would translate to a neural network with 3 layers of those sizes. The headings and their specifications are as follows:
 
-	  - `numlayers`: contains an integer for the number of layers in the network. usually the first line.
-
-	  - `topology`: contains `numlayers` integers describing the number of neurons in each layer. usually the second line.
-
-	  - `activations`: contains `numlayers` strings describing the activation functions for each layer. This includes the input layer, even though it is never used.
-
-	  - `regularization`: contains an all-caps string describing the mode of regularization and a decimal for the lambda value (regularization strength)
-
-	  - `biases`: contains all the biases for all the layers. in order from input to output layer, first neuron to last neuron for each layer. includes the input layer, even though it is never used.
-
-	  - `weights`: contains all the weights. Internally, weights is represented as a 3D array with 1st dimension layer, 2nd dimension neuron #, and 3rd dimension incoming neuron # from previous layer. All weights are flattened into series in order from input to output layer, first neuron to last neuron for each layer, and first neuron to last neuron for each previous layer.
+	- `numlayers`: contains an integer for the number of layers in the network. usually the first line.
+	- `topology`: contains `numlayers` integers describing the number of neurons in each layer. usually the second line.
+	- `activations`: contains `numlayers` strings describing the activation functions for each layer. This includes the input layer, even though it is never used.
+	- `regularization`: contains an all-caps string describing the mode of regularization and a decimal for the lambda value (regularization strength)
+	- `biases`: contains all the biases for all the layers. in order from input to output layer, first neuron to last neuron for each layer. includes the input layer, even though it is never used.
+	- `weights`: contains all the weights. Internally, weights is represented as a 3D array with 1st dimension layer, 2nd dimension neuron #, and 3rd dimension incoming neuron # from previous layer. All weights are flattened into series in order from input to output layer, first neuron to last neuron for each layer, and first neuron to last neuron for each previous layer.
 
 7. **Access/Modify Parameters**: get/set the parameters and information about the network.
 
-	```java
-	int numLayers = network.numLayers;
-	int[] topology = network.GetTopology(); //topology[i] is # of neurons of layer i
-		 
-	double[][][] weights = network.GetWeights();
-	network.SetWeight(L,n2,n1,w); //sets the weight between layer L neuron n2 and layer L-1 neuron n1 to w
+ ```java
+ int numLayers = network.numLayers;
+ int[] topology = network.GetTopology(); //topology[i] is # of neurons of layer i
+   
+ double[][][] weights = network.GetWeights();
+ network.SetWeight(L,n2,n1,w); //sets the weight between layer L neuron n2 and layer L-1 neuron n1 to w
 
-	double[][] biases = network.GetBiases();
-	network.SetBias(L,n,b); //sets the bias of layer L neuron n to b
+ double[][] biases = network.GetBiases();
+ network.SetBias(L,n,b); //sets the bias of layer L neuron n to b
 
-	String activations = network.GetActivations();
-	network.SetActivation(L,act); //sets the activation of layer L to act
+ String activations = network.GetActivations();
+ network.SetActivation(L,act); //sets the activation of layer L to act
 
-	double[][] neurons = network.GetNeurons();
-	
-	String info = network.toString();
-	//the following two lines do the same thing
-	System.out.println(info);
-	System.out.println(network);
-	```
+ double[][] neurons = network.GetNeurons();
+ 
+ String info = network.toString();
+ //the following two lines do the same thing
+ System.out.println(info);
+ System.out.println(network);
+ ```
 
 ## Program Usage
 
@@ -226,46 +220,49 @@ To use this neural network implementation, you can interact with a custom consol
 
 1. **Compile the Code**: First, make sure you are working in the project directory. If you are running the full project with the console interface, run the following commands to compile and run the program:
 
-	***Unix (Mac/Linux) users***:
+ ***Unix (Mac/Linux) users***:
 
-	__Compile__:
+ **Compile**:
 
    ```shell
    javac -cp ".:./libraries/jfreechart-1.5.3.jar" Main.java
-	```
-	__Run__:
-	```shell
-	java -cp ".:./libraries/jfreechart-1.5.3.jar" Main
-	```
+ ```
 
-	***Windows users***:
+	**Run**:
+ ```shell
+ java -cp ".:./libraries/jfreechart-1.5.3.jar" Main
+ ```
 
-	__Compile__:
+ ***Windows users***:
+
+ **Compile**:
 
    ```shell
    javac -cp ".;./libraries/jfreechart-1.5.3.jar" Main.java
-	```
-	__Run__:
-	```shell
-	java -cp ".;./libraries/jfreechart-1.5.3.jar" Main
-	```
+ ```
 
-	Or, if you are just using the `NeuralNetwork` class, the jfreechart library can be excluded, simplifying the commands to:
+	**Run**:
+ ```shell
+ java -cp ".;./libraries/jfreechart-1.5.3.jar" Main
+ ```
 
-	__Compile__:
+ Or, if you are just using the `NeuralNetwork` class, the jfreechart library can be excluded, simplifying the commands to:
+
+ **Compile**:
 
    ```shell
    javac Main.java
-	```
-	__Run__:
+ ```
 
-	```shell
-	java Main
-	```
+	**Run**:
+
+ ```shell
+ java Main
+ ```
 
 This will launch the program's custom console, allowing you to control and modify neural networks.
 
-#### Available Commands:
+#### Available Commands
 
 - `help`: Display a list of available commands and their descriptions.
 
@@ -299,7 +296,7 @@ This will launch the program's custom console, allowing you to control and modif
 
 - `exit`: Exit the program.
 
-#### Using the Commands:
+#### Using the Commands
 
 - Type a command and press Enter to execute it. Follow the prompts to provide the required information.
 
@@ -309,15 +306,15 @@ This will launch the program's custom console, allowing you to control and modif
 
 - For evaluation, use the evaluate command, and input the data you want to predict on, or `mnist [case #]`
 
-- The mnist dataset has been built into the program to allow for building/evaluating hand-drawn digit recognition networks directly using the console and recieving a realtime accuracy visualization to assist with training. You can run `mnist test` to draw your own hand-written digits for the network to evaluate in realtime. the `mnist` command to import the MNIST dataset has an optional `augmented` modifier to randomly apply affine transformations to the data, making the network more generalizable at the cost of some accuracy and convergence  speed. mnist networks MUST HAVE input size __784__ and output size __10__. In the majority of cases, the output layer has __softmax__ activation and is trained using the __categorical_crossentropy__ loss function.
+- The mnist dataset has been built into the program to allow for building/evaluating hand-drawn digit recognition networks directly using the console and recieving a realtime accuracy visualization to assist with training. You can run `mnist test` to draw your own hand-written digits for the network to evaluate in realtime. the `mnist` command to import the MNIST dataset has an optional `augmented` modifier to randomly apply affine transformations to the data, making the network more generalizable at the cost of some accuracy and convergence  speed. mnist networks MUST HAVE input size **784** and output size **10**. In the majority of cases, the output layer has **softmax** activation and is trained using the **categorical_crossentropy** loss function.
 
-#### Save and Load Models:
+#### Save and Load Models
 
 - You can save the trained model using the save command. This will save the model to a file for future use.
 
 - To load a pre-trained model, use the load command and specify the file path of the saved model.
 
-#### Training/Test Data File Formatting:
+#### Training/Test Data File Formatting
 
 All training and test dataset files must be formatted in the following way:
 
@@ -325,18 +322,25 @@ All training and test dataset files must be formatted in the following way:
 - every line is a separate training case
 - on each line, input is separated by spaces, then equal sign, then output separated by spaces
 
-#### Exiting the Program:
+#### Exiting the Program
 
 - To exit the program, simply type exit, and the program will terminate.
 
 ## Examples
 
-A few neural networks and their training sets have been pre-included into the project, ready to be loaded in. They are:
+A few neural networks and their training sets have been pre-included into the project in the `models` and `datasets` directories respectively, ready to be loaded in:
+
+#### `models`
 
 - `SavedNetwork1`: simple neural network to add 2 numbers (object mode)
 - `SavedNetwork2`: deep neural network to add 2 numbers (object mode)
-- `TrainSet1`: training/test dataset for adding 2 numbers (can be used for `SavedNetwork1` and `SavedNetwork2`) (object mode)
 - `MNISTNetwork`: an untrained neural network with the correct topology to evaluate MNIST cases (digit recognition). accuracy ≈ 10.61% (object mode)
 - `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition) with high, generalized accuracy from training on an augmented data set. Good for testing your own digits. accuracy ≈ 98.14% (object mode)
 - `MNISTParams`: same as `MNISTNetworkTrained`, but as plain text (parameters mode)
 - `MNISTNetworkOverfitted`: a neural network that has been trained excessively, making it overfit to the MNIST dataset. Bad for testing your own digits. accuracy ≈ 99.94% (object mode)
+
+#### `datasets`
+
+- `TrainSet1`: training/test dataset for adding 2 numbers (can be used for `SavedNetwork1` and `SavedNetwork2`) (plain text mode)
+- `MNIST`: the MNIST dataset for training/evaluating handwritten digits (stored as `mnist_train.txt` and `mnist_test.txt` in `data` directory)
+- `testTrainSet`: training/test dataset with a single datapoint for testing purposes (plain text mode)
