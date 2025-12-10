@@ -40,3 +40,4 @@ replay_pid*
 .project
 
 .DS_Store
+.breakpoints
