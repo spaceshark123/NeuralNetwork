@@ -32,3 +32,11 @@ replay_pid*
 .classpath
 .project
 .settings
+
+.vscode/
+.settings/
+.idea/
+.replit
+.project
+
+.DS_Store
