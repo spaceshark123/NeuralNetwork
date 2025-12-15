@@ -1,3 +1,5 @@
+package com.github.spaceshark123.neuralnetwork;
+
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;

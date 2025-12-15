@@ -1,3 +1,5 @@
+package com.github.spaceshark123.neuralnetwork;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;

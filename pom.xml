@@ -8,6 +8,10 @@
   <artifactId>neuralnetwork</artifactId>
   <version>1.0-SNAPSHOT</version>
 
+  <properties>
+    <maven.compiler.release>11</maven.compiler.release> <!-- Set Java version to 11 for compatibility with String.repeat() -->
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.jfree</groupId>
