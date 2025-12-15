@@ -1,21 +1,31 @@
-package com.github.spaceshark123.neuralnetwork;
+package com.github.spaceshark123.neuralnetwork.cli;
 
-import java.util.*;
-import java.lang.*;
-import java.io.*;
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
-import java.awt.event.ComponentListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import javax.swing.WindowConstants;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Scanner;
+import java.util.StringTokenizer;
 
-class Main {
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+import com.github.spaceshark123.neuralnetwork.ChartUpdater;
+import com.github.spaceshark123.neuralnetwork.NeuralNetwork;
+import com.github.spaceshark123.neuralnetwork.RealTimeSoftDrawCanvas;
+
+class NeuralNetworkCLI{
 	public static int SIZE = 1000;
 	public static double[][] mnistOutputs;
 	public static int[] mnistLabels;

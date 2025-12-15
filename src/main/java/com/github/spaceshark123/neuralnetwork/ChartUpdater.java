@@ -11,7 +11,6 @@ import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.chart.title.TextTitle;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.NumberTickUnit;
-import org.jfree.chart.ui.ApplicationFrame;
 
 import javax.swing.*;
 import java.awt.*;
