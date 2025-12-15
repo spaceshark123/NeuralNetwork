@@ -1,7 +1,7 @@
 
 # Neural Network in Java
 
-This project provides a flexible and extensible implementation of a multithreaded feedforward neural network in Java with popular optimizers included, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use and customize, making it a valuable tool for various machine learning and deep learning tasks. This was made without any external machine learning, math, or other libraries to aid in its creation (pure Java, at least for the base class).
+This project provides a flexible and extensible implementation of a multithreaded feedforward neural network in Java with popular optimizers included, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use, import and customize, making it a valuable tool for various machine learning and deep learning tasks. This was made without any external machine learning, math, or other libraries to aid in its creation (pure Java, at least for the base class). Maven is used for dependency management.
 
 ## Table of Contents
 
@@ -13,7 +13,7 @@ This project provides a flexible and extensible implementation of a multithreade
 
 ## Overview
 
-Neural networks are a fundamental building block of modern machine learning and artificial intelligence. This Java-based implementation allows you to create, train, evaluate, and use neural networks for a wide range of applications using a highly user-friendly console/GUI interface or directly using the `NeuralNetwork` class for your own needs if necessary.
+Neural networks are a fundamental building block of modern machine learning and artificial intelligence. This Java-based implementation allows you to create, train, evaluate, and use neural networks for a wide range of applications using a highly user-friendly console/GUI interface or directly using the `NeuralNetwork` class in the `com.github.spaceshark123.neuralnetwork` package for your own needs if necessary.
 
 ## Key Features
 
@@ -51,7 +51,7 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 ## Internal Usage
 
-For use in your own Java projects, simply import the `NeuralNetwork.java` class file and it will immediately be usable. The following section covers the proper syntax for
+For use in your own Java projects, simply import the `com.github.spaceshark123.neuralnetwork.NeuralNetwork` class and it will immediately be usable. The following section covers the proper syntax for
 
 1. **Initialize the Neural Network**: Create a neural network by specifying the topology (number of neurons in each layer) and activation functions.
 
@@ -218,49 +218,27 @@ For use in your own Java projects, simply import the `NeuralNetwork.java` class 
 
 To use this neural network implementation, you can interact with a custom console provided by the program. Follow these steps to get started:
 
-1. **Compile the Code**: First, make sure you are working in the project directory. If you are running the full project with the console interface, run the following commands to compile and run the program:
+1. **Build the JAR**: First, make sure you are working in the project directory. If you are running the full project with the console interface, run the following commands to compile and run the program:
 
- ***Unix (Mac/Linux) users***:
-
- **Compile**:
+   **Compile**:
 
    ```shell
-   javac -cp ".:./libraries/jfreechart-1.5.3.jar" Main.java
- ```
+   mvn package
+   ```
 
-	**Run**:
- ```shell
- java -cp ".:./libraries/jfreechart-1.5.3.jar" Main
- ```
-
- ***Windows users***:
-
- **Compile**:
+   **Run**:
 
    ```shell
-   javac -cp ".;./libraries/jfreechart-1.5.3.jar" Main.java
- ```
+   # Run the produced JAR (replace <version> with the actual version in target/)
+   java -jar target/NeuralNetwork-<version>.jar
 
-	**Run**:
- ```shell
- java -cp ".;./libraries/jfreechart-1.5.3.jar" Main
- ```
-
- Or, if you are just using the `NeuralNetwork` class, the jfreechart library can be excluded, simplifying the commands to:
-
- **Compile**:
-
-   ```shell
-   javac Main.java
- ```
-
-	**Run**:
-
- ```shell
- java Main
- ```
+   # Or use a glob to avoid typing the version (works if only one matching JAR exists)
+   java -jar target/NeuralNetwork-*.jar
+   ```
 
 This will launch the program's custom console, allowing you to control and modify neural networks.
+
+ Or, if you are just using the `NeuralNetwork` class, the jar packaging can be excluded, and you can compile and run your own Java files that import the `NeuralNetwork` class directly using the `import com.github.spaceshark123.neuralnetwork.NeuralNetwork;` statement.
 
 #### Available Commands
 
@@ -332,15 +310,11 @@ A few neural networks and their training sets have been pre-included into the pr
 
 #### `models`
 
-- `SavedNetwork1`: simple neural network to add 2 numbers (object mode)
-- `SavedNetwork2`: deep neural network to add 2 numbers (object mode)
-- `MNISTNetwork`: an untrained neural network with the correct topology to evaluate MNIST cases (digit recognition). accuracy ≈ 10.61% (object mode)
-- `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition) with high, generalized accuracy from training on an augmented data set. Good for testing your own digits. accuracy ≈ 98.14% (object mode)
-- `MNISTParams`: same as `MNISTNetworkTrained`, but as plain text (parameters mode)
-- `MNISTNetworkOverfitted`: a neural network that has been trained excessively, making it overfit to the MNIST dataset. Bad for testing your own digits. accuracy ≈ 99.94% (object mode)
+- `MNISTNetwork`: an untrained neural network with the correct topology to evaluate MNIST cases (digit recognition). accuracy ≈ 10% (object mode)
+- `MNISTNetworkTrained`: a trained neural network that evaluates MNIST cases (digit recognition) with high, generalized accuracy from training on an augmented data set. Good for testing your own digits. accuracy ≈ 98.14% (parameters mode)
 
 #### `datasets`
 
-- `TrainSet1`: training/test dataset for adding 2 numbers (can be used for `SavedNetwork1` and `SavedNetwork2`) (plain text mode)
-- `MNIST`: the MNIST dataset for training/evaluating handwritten digits (stored as `mnist_train.txt` and `mnist_test.txt` in `data` directory)
+- `TrainSet1`: training/test dataset for adding 2 numbers (2 inputs, 1 output) (plain text mode)
+- `MNIST`: the MNIST dataset for training/evaluating handwritten digits (stored as `mnist_train.txt` and `mnist_test.txt` in `data` directory), 784 inputs, 10 outputs
 - `testTrainSet`: training/test dataset with a single datapoint for testing purposes (plain text mode)
