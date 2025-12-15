@@ -159,37 +159,37 @@ For use in your own Java projects, simply import the `com.github.spaceshark123.n
 
 5. **Evaluation**: Use the trained model to make predictions and evaluate the cost
 
-   ```java
+  ```java
   double[] input = {...};
   double[] prediction = network.Evaluate(input);
   
   double[] expected = {...};
   String lossFunction = "mse"; // or "sse" or "categorical_crossentropy"
   double cost = network.Cost(prediction, expected, lossFunction);
-   ```
+  ```
 
 6. **Save and Load**: Save the trained model to disk and load it for future use, either as a java object, which isn't human readable and doesn't transfer between programming languages but is faster, or a plain text file containing parameters, which is human readable and also transferrable between programming languages.
 
-   ```java
-   // Save the model as a java object
-   NeuralNetwork.Save(network, "my_model_java.nn");
-   // Load the model from a file formatted as a java object
-   NeuralNetwork loadedNetwork = NeuralNetwork.Load("my_model_java.nn");
+  ```java
+  // Save the model as a java object
+  NeuralNetwork.Save(network, "my_model_java.nn");
+  // Load the model from a file formatted as a java object
+  NeuralNetwork loadedNetwork = NeuralNetwork.Load("my_model_java.nn");
 
-   // Save the model as a plain text file
-   NeuralNetwork.SaveParameters(network, "my_model.txt");
-   // Load the model from a plain text file
-   NetworkNetwork loadedTxtNetwork = NeuralNetwork.Load("my_model.txt");
-   ```
+  // Save the model as a plain text file
+  NeuralNetwork.SaveParameters(network, "my_model.txt");
+  // Load the model from a plain text file
+  NetworkNetwork loadedTxtNetwork = NeuralNetwork.Load("my_model.txt");
+  ```
 
    The plain text file is separated into lines that each contain a unique set of parameters specified by the first token and followed by the corresponding values, all separated by spaces. For example, one line could contain: `topology 784 512 10`, which would translate to a neural network with 3 layers of those sizes. The headings and their specifications are as follows:
 
-	- `numlayers`: contains an integer for the number of layers in the network. usually the first line.
-	- `topology`: contains `numlayers` integers describing the number of neurons in each layer. usually the second line.
-	- `activations`: contains `numlayers` strings describing the activation functions for each layer. This includes the input layer, even though it is never used.
-	- `regularization`: contains an all-caps string describing the mode of regularization and a decimal for the lambda value (regularization strength)
-	- `biases`: contains all the biases for all the layers. in order from input to output layer, first neuron to last neuron for each layer. includes the input layer, even though it is never used.
-	- `weights`: contains all the weights. Internally, weights is represented as a 3D array with 1st dimension layer, 2nd dimension neuron #, and 3rd dimension incoming neuron # from previous layer. All weights are flattened into series in order from input to output layer, first neuron to last neuron for each layer, and first neuron to last neuron for each previous layer.
+- `numlayers`: contains an integer for the number of layers in the network. usually the first line.
+- `topology`: contains `numlayers` integers describing the number of neurons in each layer. usually the second line.
+- `activations`: contains `numlayers` strings describing the activation functions for each layer. This includes the input layer, even though it is never used.
+- `regularization`: contains an all-caps string describing the mode of regularization and a decimal for the lambda value (regularization strength)
+- `biases`: contains all the biases for all the layers. in order from input to output layer, first neuron to last neuron for each layer. includes the input layer, even though it is never used.
+- `weights`: contains all the weights. Internally, weights is represented as a 3D array with 1st dimension layer, 2nd dimension neuron #, and 3rd dimension incoming neuron # from previous layer. All weights are flattened into series in order from input to output layer, first neuron to last neuron for each layer, and first neuron to last neuron for each previous layer.
 
 7. **Access/Modify Parameters**: get/set the parameters and information about the network.
 
