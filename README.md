@@ -1,7 +1,7 @@
 
 # Neural Network in Java
 
-This project provides a flexible and extensible implementation of a multithreaded feedforward neural network in Java with popular optimizers included, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use, import and customize, making it a valuable tool for various machine learning and deep learning tasks. This was made without any external machine learning, math, or other libraries to aid in its creation (pure Java, at least for the base class). Maven is used for dependency management.
+This project provides a flexible and extensible implementation of a multithreaded feedforward neural network in Java with popular optimizers included, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use, import and customize, making it a valuable tool for various machine learning and deep learning tasks. This was made without any external machine learning, math, or other libraries to aid in its creation (pure Java, at least for the base class). Maven is used for dependency management, along with a Maven wrapper for ease of use.
 
 ## Table of Contents
 
@@ -216,7 +216,7 @@ For use in your own Java projects, simply import the `com.github.spaceshark123.n
 
 ## Program Usage
 
-To use this neural network implementation, you can interact with a custom console provided by the program. Follow these steps to get started:
+To use this neural network implementation, you can interact with a custom console provided by the program. A maven wrapper has been included for use. If you do not have Maven installed (check with `mvn -v`), you can use the wrapper scripts to build and run the project by replacing `mvn` with `./mvnw` (Linux/Mac) or `mvnw.cmd` (Windows) in the commands below:
 
 1. **Build the JAR**: First, make sure you are working in the project directory. If you are running the full project with the console interface, run the following commands to compile and run the program:
 
