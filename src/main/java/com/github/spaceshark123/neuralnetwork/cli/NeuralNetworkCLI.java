@@ -23,6 +23,7 @@ import javax.swing.JPanel;
 
 import com.github.spaceshark123.neuralnetwork.NeuralNetwork;
 import com.github.spaceshark123.neuralnetwork.RealTimeSoftDrawCanvas;
+import com.github.spaceshark123.neuralnetwork.activation.ActivationFunction;
 import com.github.spaceshark123.neuralnetwork.callback.ChartUpdater;
 import com.github.spaceshark123.neuralnetwork.optimizer.*;
 
@@ -105,7 +106,7 @@ class NeuralNetworkCLI{
 					} else {
 						if(s[1].equals("activations")) {
 							System.out.print("activations: ");
-							printArr(Arrays.stream(nn.getActivations()).map(Enum::toString).toArray(String[]::new));
+							printArr(Arrays.stream(nn.getActivations()).map(ActivationFunction::getName).toArray(String[]::new));
 						} else if(s[1].equals("topology")) {
 							System.out.print("topology: ");
 							printArr(nn.getTopology());
@@ -150,16 +151,16 @@ class NeuralNetworkCLI{
 						topology[i] = Integer.parseInt(ls[i]);
 					}
 					Output("Activations for each layer (separated by spaces): ");
-					Output("Choices: \n    - linear\n    - sigmoid\n    - tanh\n    - relu\n    - binary\n    - softmax");
+					Output("Choices: \n    - linear\n    - sigmoid\n    - tanh\n    - relu\n    - leakyrelu(alpha={value})\n    - binary\n    - softmax");
 					ls = Input(scan).split(" ");
 					if (ls.length != topology.length) {
 						Output("mismatch in number of layers");
 						continue;
 					}
-					NeuralNetwork.ActivationFunction[] as = new NeuralNetwork.ActivationFunction[topology.length];
+					ActivationFunction[] as = new ActivationFunction[topology.length];
 					for (int i = 0; i < ls.length; i++) {
 						try {
-							as[i] = NeuralNetwork.ActivationFunction.valueOf(ls[i].toUpperCase());
+							as[i] = ActivationFunction.fromConfigString(ls[i].toUpperCase());
 						} catch (IllegalArgumentException e) {
 							Output("invalid activation function: " + ls[i]);
 							continue;
@@ -263,7 +264,7 @@ class NeuralNetworkCLI{
 							Output("enter the new activation: ");
 							Output("Choices: \n    - linear\n    - sigmoid\n    - tanh\n    - relu\n    - binary\n    - softmax");
 							try {
-								nn.setActivation(layer, NeuralNetwork.ActivationFunction.valueOf(Input(scan).toUpperCase()));
+								nn.setActivation(layer, ActivationFunction.fromConfigString(Input(scan).toUpperCase()));
 							} catch (IllegalArgumentException e) {
 								Output("invalid activation function");
 								continue;

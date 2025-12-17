@@ -23,6 +23,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.github.spaceshark123.neuralnetwork.callback.TrainingCallback;
 import com.github.spaceshark123.neuralnetwork.optimizer.Optimizer;
 import com.github.spaceshark123.neuralnetwork.optimizer.SGD;
+import com.github.spaceshark123.neuralnetwork.activation.ActivationFunction;
+import com.github.spaceshark123.neuralnetwork.activation.ReLU;
+import com.github.spaceshark123.neuralnetwork.activation.Softmax;
 
 public class NeuralNetwork implements Serializable {
 	private static final long serialVersionUID = 1L;
@@ -56,15 +59,6 @@ public class NeuralNetwork implements Serializable {
 		NONE,
 		L1,
 		L2
-	}
-
-	public static enum ActivationFunction {
-		LINEAR,
-		SIGMOID,
-		TANH,
-		RELU,
-		BINARY,
-		SOFTMAX
 	}
 
 	// Regularization settings (lambda = regularization strength)
@@ -151,7 +145,7 @@ public class NeuralNetwork implements Serializable {
 		for (int i = 1; i < numLayers; i++) {
 			int n = neuronsPerLayer[i - 1];
 			double min, max;
-			if (activations[i] == ActivationFunction.RELU) {
+			if (activations[i] instanceof ReLU) {
 				// he weight initialization (for relu) (gaussian distribution)
 				double mean = 0, std = Math.sqrt(2.0 / n);
 				for (int j = 0; j < neuronsPerLayer[i]; j++) {
@@ -259,135 +253,39 @@ public class NeuralNetwork implements Serializable {
 		return regTerm;
 	}
 
-	protected double linear_activation(double raw) {
-		return raw;
-	}
-
-	protected double sigmoid_activation(double raw) {
-		return 1d / (1 + Math.exp(-raw));
-	}
-
-	protected double tanh_activation(double raw) {
-		return Math.tanh(raw);
-	}
-
-	protected double relu_activation(double raw) {
-		return Math.max(0, raw);
-	}
-
-	protected double binary_activation(double raw) {
-		return raw > 0 ? 1 : 0;
-	}
-
-	protected double softmax_activation(double raw, double[] neuronValues) {
-		double maxVal = max(neuronValues);
-
-		// Compute the normalization factor (sum of exponentials)
-		double total = 0;
-		for (double value : neuronValues) {
-			total += Math.exp(value - maxVal);
-		}
-		// Compute the softmax activation
-		return Math.exp(raw - maxVal - Math.log(total));
-	}
-
-	protected double softmax_der(double[] neuronValues, int index) {
-		double softmax = softmax_activation(neuronValues[index], neuronValues);
-		return softmax * (1.0 - softmax);
-	}
-
 	protected double activate(double raw, int layer) {
-		switch (activations[layer]) {
-			case LINEAR:
-				return linear_activation(raw);
-			case SIGMOID:
-				return sigmoid_activation(raw);
-			case TANH:
-				return tanh_activation(raw);
-			case RELU:
-				return relu_activation(raw);
-			case BINARY:
-				return binary_activation(raw);
-			case SOFTMAX:
-				return softmax_activation(raw, Arrays.copyOfRange(neuronsRaw[layer], 0, neuronsPerLayer[layer]));
-			default:
-				return linear_activation(raw);
+		ActivationFunction activation = activations[layer];
+		if (activation.requiresLayerContext()) {
+			// pass full layer context but we dont have it, so throw error
+			throw new UnsupportedOperationException(
+					activation.getName() + " requires layer context. Use activateWithContext() instead.");
 		}
+		return activation.activate(raw);
 	}
 
-	protected double activate(double raw, int layer, double[] neuronsRaw) {
-		switch (activations[layer]) {
-			case LINEAR:
-				return linear_activation(raw);
-			case SIGMOID:
-				return sigmoid_activation(raw);
-			case TANH:
-				return tanh_activation(raw);
-			case RELU:
-				return relu_activation(raw);
-			case BINARY:
-				return binary_activation(raw);
-			case SOFTMAX:
-				return softmax_activation(raw, neuronsRaw);
-			default:
-				return linear_activation(raw);
+	protected double activate(double raw, int layer, double[] neuronsRaw, int index) {
+		ActivationFunction activation = activations[layer];
+		if (activation.requiresLayerContext()) {
+			return activation.activateWithContext(raw, neuronsRaw, index);
 		}
+		return activation.activate(raw);
 	}
 
 	protected double activate_der(double raw, int layer, int index) {
-		double val;
-		switch (activations[layer]) {
-			case LINEAR:
-				return 1;
-			case SIGMOID:
-				double sigmoidVal = sigmoid_activation(raw);
-				val = sigmoidVal * (1 - sigmoidVal);
-				return val;
-			case TANH:
-				val = Math.pow(1d / Math.cosh(raw), 2);
-				return val;
-			case RELU:
-				if (raw <= 0) {
-					return 0;
-				} else {
-					return 1;
-				}
-			case BINARY:
-				return 0;
-			case SOFTMAX:
-				val = softmax_der(Arrays.copyOfRange(neuronsRaw[layer], 0, neuronsPerLayer[layer]), index);
-				return val;
-			default:
-				return 1;
+		ActivationFunction activation = activations[layer];
+		if (activation.requiresLayerContext()) {
+			double[] layerRaw = Arrays.copyOfRange(neuronsRaw[layer], 0, neuronsPerLayer[layer]);
+			return activation.derivativeWithContext(raw, layerRaw, index);
 		}
+		return activation.derivative(raw);
 	}
 
 	protected double activate_der(double raw, int layer, double[] neuronsRaw, int index) {
-		double val;
-		switch (activations[layer]) {
-			case LINEAR:
-				return 1;
-			case SIGMOID:
-				double sigmoidVal = sigmoid_activation(raw);
-				val = sigmoidVal * (1 - sigmoidVal);
-				return val;
-			case TANH:
-				val = Math.pow(1d / Math.cosh(raw), 2);
-				return val;
-			case RELU:
-				if (raw <= 0) {
-					return 0;
-				} else {
-					return 1;
-				}
-			case BINARY:
-				return 0;
-			case SOFTMAX:
-				val = softmax_der(neuronsRaw, index);
-				return val;
-			default:
-				return 1;
+		ActivationFunction activation = activations[layer];
+		if (activation.requiresLayerContext()) {
+			return activation.derivativeWithContext(raw, neuronsRaw, index);
 		}
+		return activation.derivative(raw);
 	}
 
 	protected void clearNeurons() {
@@ -423,17 +321,18 @@ public class NeuralNetwork implements Serializable {
 					raw += weights[currentLayer][neuron][prevNeuron] * neurons[currentLayer - 1][prevNeuron];
 				}
 				neuronsRaw[currentLayer][neuron] = raw;
-				if (activations[currentLayer] == ActivationFunction.SOFTMAX) {
+				// for context-requiring activations, store raw for now
+				if (activations[currentLayer].requiresLayerContext()) {
 					neurons[currentLayer][neuron] = raw;
 				} else {
 					neurons[currentLayer][neuron] = activate(raw, currentLayer);
 				}
 			});
-
-			if (activations[currentLayer] == ActivationFunction.SOFTMAX) {
+			// handle context-requiring activations
+			if (activations[currentLayer].requiresLayerContext()) {
 				IntStream.range(0, neuronsPerLayer[currentLayer]).parallel().forEach(i -> {
 					neurons[currentLayer][i] = activate(neuronsRaw[currentLayer][i], currentLayer,
-							Arrays.copyOfRange(neuronsRaw[currentLayer], 0, neuronsPerLayer[currentLayer]));
+							Arrays.copyOfRange(neuronsRaw[currentLayer], 0, neuronsPerLayer[currentLayer]), i);
 				});
 			}
 		}
@@ -457,16 +356,17 @@ public class NeuralNetwork implements Serializable {
 					raw += weights[currentLayer][neuron][prevNeuron] * neurons[currentLayer - 1][prevNeuron];
 				}
 				neuronsRaw[currentLayer][neuron] = raw;
-				if (activations[currentLayer] == ActivationFunction.SOFTMAX) {
+				if (activations[currentLayer].requiresLayerContext()) {
 					neurons[currentLayer][neuron] = raw;
 				} else {
 					neurons[currentLayer][neuron] = activate(raw, currentLayer);
 				}
 			});
 
-			if (activations[currentLayer] == ActivationFunction.SOFTMAX) {
+			if (activations[currentLayer].requiresLayerContext()) {
 				IntStream.range(0, neuronsPerLayer[currentLayer]).parallel().forEach(i -> {
-					neurons[currentLayer][i] = activate(neuronsRaw[currentLayer][i], currentLayer);
+					neurons[currentLayer][i] = activate(neuronsRaw[currentLayer][i], currentLayer,
+							Arrays.copyOfRange(neuronsRaw[currentLayer], 0, neuronsPerLayer[currentLayer]), i);
 				});
 			}
 		}
@@ -479,7 +379,8 @@ public class NeuralNetwork implements Serializable {
 	public String toString() {
 		StringBuilder print = new StringBuilder().append("Neural Network \n");
 		print.append("\nTopology (neurons per layer): ").append(printArr(neuronsPerLayer));
-		print.append("\nActivations (per layer): ").append(printArr(Arrays.stream(activations).map(Enum::toString).toArray(String[]::new)));
+		print.append("\nActivations (per layer): ")
+				.append(printArr(Arrays.stream(activations).map(ActivationFunction::getName).toArray(String[]::new)));
 		print.append("\nRegularization: ").append(regularizationType.toString()).append(" lambda: ").append(lambda);
 
 		print.append("\nBiases:\n");
@@ -576,7 +477,7 @@ public class NeuralNetwork implements Serializable {
 			}
 			print.append("\nactivations ");
 			for (int i = 0; i < network.activations.length; i++) {
-				print.append(network.activations[i]).append(" ");
+				print.append(network.activations[i].toConfigString()).append(" ");
 			}
 			print.append("\nregularization ").append(network.regularizationType.toString()).append(" ")
 					.append(network.lambda).append("\n");
@@ -660,7 +561,11 @@ public class NeuralNetwork implements Serializable {
 						break;
 					case "activations":
 						for (int i = 1; i < tokens.length; i++) {
-							network.activations[i - 1] = ActivationFunction.valueOf(tokens[i].toUpperCase());
+							try {
+								network.activations[i - 1] = ActivationFunction.fromConfigString(tokens[i]);
+							} catch (IllegalArgumentException e) {
+								throw new RuntimeException("Failed to load activation function: " + tokens[i], e);
+							}
 						}
 						break;
 					case "regularization":
@@ -787,7 +692,8 @@ public class NeuralNetwork implements Serializable {
 		return backpropagate(this.neurons, this.neuronsRaw, biasGrad, weightGrad, predicted, expected, 1, lossFunction);
 	}
 
-	private double[] backpropagate(double[][] neurons, double[][] neuronsRaw, double[][] biasGrad, double[][][] weightGrad,
+	private double[] backpropagate(double[][] neurons, double[][] neuronsRaw, double[][] biasGrad,
+			double[][][] weightGrad,
 			double[] predicted, double[] expected, int layer, String lossFunction) {
 		double[] neuronGradients = new double[neuronsPerLayer[layer]];
 
@@ -795,7 +701,8 @@ public class NeuralNetwork implements Serializable {
 		if (layer == numLayers - 1) {
 			// last layer (output layer)
 			for (int i = 0; i < neuronsPerLayer[layer]; i++) {
-				if (lossFunction.equals("categorical_crossentropy") && activations[layer] == ActivationFunction.SOFTMAX) {
+				if (lossFunction.equals("categorical_crossentropy")
+						&& activations[layer] instanceof Softmax) {
 					// Softmax with categorical crossentropy simplification to speed up computation
 					neuronGradients[i] = predicted[i] - expected[i];
 				} else {
@@ -837,7 +744,8 @@ public class NeuralNetwork implements Serializable {
 		return Math.max(min, Math.min(max, value));
 	}
 
-	// for classification tasks, evaluates accuracy of the network on given dataset. outputs are expected to be one-hot encoded.
+	// for classification tasks, evaluates accuracy of the network on given dataset.
+	// outputs are expected to be one-hot encoded.
 	public double evaluateAccuracy(double[][] inputs, double[][] outputs) {
 		int numCorrect = 0;
 		for (int i = 0; i < inputs.length; i++) {
