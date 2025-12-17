@@ -33,7 +33,7 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 - **Multiple Loss Functions**:  Supports major loss/error functions: Mean Squared Error, Sum Squared Error, and Categorical Cross-Entropy.
 
-- **Multiple Optimizers**: Includes popular optimizers like Stochastic gradient descent (SGD), SGD with momentum, AdaGrad, RMSProp, and Adam. Supports additional, custom optimizers using the `NeuralNetwork.Optimizer` interface.
+- **Multiple Optimizers**: Includes popular optimizers like Stochastic gradient descent (SGD), SGD with momentum, AdaGrad, RMSProp, and Adam. Supports additional, custom optimizers using the `Optimizer` interface from the `com.github.spaceshark123.neuralnetwork.optimizer` package.
 
 - **Weight Initialization**: Utilizes weight initialization techniques like Xavier (for linear, sigmoid, and tanh) and He (for relu) for better convergence.
 
@@ -51,7 +51,13 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 ## Internal Usage
 
-For use in your own Java projects, simply import the `com.github.spaceshark123.neuralnetwork.NeuralNetwork` class and it will immediately be usable. The following section covers the proper syntax for
+The following packages are available for use:
+- `com.github.spaceshark123.neuralnetwork`: Contains the main `NeuralNetwork` class and related interfaces for optimizers and training callbacks.
+- `com.github.spaceshark123.neuralnetwork.cli`: Contains the console interface for user interaction with the neural network. Intended for direct program running rather than import.
+- `com.github.spaceshark123.neuralnetwork.optimizer`: Contains optimizer implementations and the `Optimizer` interface for creating custom optimizers.
+- `com.github.spaceshark123.neuralnetwork.callback`: Contains the `TrainingCallback` interface for creating custom training callbacks and the `ChartUpdater` class for visualizing accuracy data in realtime during training.
+
+For use in your own Java projects, simply import the relevant packages/classes and it will immediately be usable. The following section covers the proper syntax for:
 
 1. **Initialize the Neural Network**: Create a neural network by specifying the topology (number of neurons in each layer) and activation functions.
 
@@ -59,7 +65,7 @@ For use in your own Java projects, simply import the `com.github.spaceshark123.n
    int[] topology = {inputSize, hiddenLayerSize, outputSize};
    String[] activations = {"linear", "relu", "softmax"};
    NeuralNetwork network = new NeuralNetwork(topology, activations);
-   network.Init(0.1); //initializes weights and biases according to spread amount
+   network.init(0.1); //initializes weights and biases according to spread amount
    ```
 
 2. **Training**: Train the neural network using your train and test/validation datasets and desired hyperparameters, taking advantage of multiple CPU cores to speed up training time.
@@ -78,29 +84,25 @@ For use in your own Java projects, simply import the `com.github.spaceshark123.n
    double momentum = 0.9;
    network.clipThreshold = 1; //default gradient clipping threshold
    //set regularization of network
-   network.SetRegularizationType(NeuralNetwork.RegularizationType.L2); 
-   network.SetRegularizationLambda(0.001);
-   NeuralNetwork.Optimizer optimizer = new NeuralNetwork.OptimizerType.Adam(0.9, 0.999); //specify optimizer for training
+   network.setRegularizationType(NeuralNetwork.RegularizationType.L2); 
+   network.setRegularizationLambda(0.001);
+   Optimizer optimizer = new Adam(0.9, 0.999); //specify optimizer for training
    //train the network with no callback
-   network.Train(trainInputs, trainOutputs, testInputs, testOutputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
+   network.train(trainInputs, trainOutputs, testInputs, testOutputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
    ```
 
- optimizers are of type `NeuralNetwork.Optimizer` and included optimizers are found in `NeuralNetwork.OptimizerType`. Included optimizers are:
+ optimizers implement the `Optimizer` interface and included optimizers are found in the `com.github.spaceshark123.neuralnetwork.optimizer` package. Included optimizers are:
 
- - `SGD()`
+- `SGD()`
+- `SGDMomentum(double momentum)`
+- `AdaGrad()`
+- `RMSProp(double decayRate)`
+- `Adam(double beta1, double beta2)`
 
- - `SGDMomentum(double momentum)`
-
- - `AdaGrad()`
-
- - `RMSProp(double decayRate)`
-
- - `Adam(double beta1, double beta2)`
-
-   Optionally, provide a custom training callback by passing in a class implementing the static `NeuralNetwork.TrainingCallback` interface as an argument. This can be used to make your own custom train addons like a graph visualization of the data. The `ChartUpdater` class has been provided to visualize accuracy data using this callback interface.
+   Optionally, provide a custom training callback by passing in a class implementing the `TrainingCallback` interface from the `com.github.spaceshark123.neuralnetwork.callback` package as an argument. This can be used to make your own custom train addons like a graph visualization of the data. The `ChartUpdater` class has been provided in the same package to visualize accuracy data using this callback interface.
 
  ```java
- public class Callback implements NeuralNetwork.TrainingCallback {
+ public class Callback implements TrainingCallback {
   //testAccuracy is -1 if the current mini-batch doesn't have a test accuracy
   @Override
   public void onEpochUpdate(int epoch, int batch, double progress, double trainAccuracy, double testAccuracy) {
@@ -112,12 +114,12 @@ For use in your own Java projects, simply import the `com.github.spaceshark123.n
   public static void main(String[] args) {
    ...
    Callback callback = new Callback();
-   network.Train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, callback);
+   network.train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, callback);
   }
  }
  ```
 
- Also, custom optimizers can be made by creating a class implementing the static `NeuralNetwork.Optimizer` interface. This can be used to create other optimizers not already included in the NeuralNetwork class.
+ Also, custom optimizers can be made by creating a class implementing the `Optimizer` interface. This can be used to create other optimizers not already included in the NeuralNetwork class.
 
  ```java
  public static class CustomOptimizer implements Optimizer {
@@ -154,32 +156,32 @@ For use in your own Java projects, simply import the `com.github.spaceshark123.n
 3. **Mutation**: Mutate the neural network for a genetic algorithm (evolution).
 
  ```java
- network.Mutate(c, v); //mutates the network with chance c and variation v
+ network.mutate(c, v); //mutates the network with chance c and variation v
  ```
 
 5. **Evaluation**: Use the trained model to make predictions and evaluate the cost
 
   ```java
   double[] input = {...};
-  double[] prediction = network.Evaluate(input);
+  double[] prediction = network.evaluate(input);
   
   double[] expected = {...};
   String lossFunction = "mse"; // or "sse" or "categorical_crossentropy"
-  double cost = network.Cost(prediction, expected, lossFunction);
+  double cost = network.cost(prediction, expected, lossFunction);
   ```
 
 6. **Save and Load**: Save the trained model to disk and load it for future use, either as a java object, which isn't human readable and doesn't transfer between programming languages but is faster, or a plain text file containing parameters, which is human readable and also transferrable between programming languages.
 
   ```java
   // Save the model as a java object
-  NeuralNetwork.Save(network, "my_model_java.nn");
+  NeuralNetwork.save(network, "my_model_java.nn");
   // Load the model from a file formatted as a java object
-  NeuralNetwork loadedNetwork = NeuralNetwork.Load("my_model_java.nn");
+  NeuralNetwork loadedNetwork = NeuralNetwork.load("my_model_java.nn");
 
   // Save the model as a plain text file
-  NeuralNetwork.SaveParameters(network, "my_model.txt");
+  NeuralNetwork.saveParameters(network, "my_model.txt");
   // Load the model from a plain text file
-  NetworkNetwork loadedTxtNetwork = NeuralNetwork.Load("my_model.txt");
+  NeuralNetwork loadedTxtNetwork = NeuralNetwork.load("my_model.txt");
   ```
 
    The plain text file is separated into lines that each contain a unique set of parameters specified by the first token and followed by the corresponding values, all separated by spaces. For example, one line could contain: `topology 784 512 10`, which would translate to a neural network with 3 layers of those sizes. The headings and their specifications are as follows:
@@ -195,18 +197,18 @@ For use in your own Java projects, simply import the `com.github.spaceshark123.n
 
  ```java
  int numLayers = network.numLayers;
- int[] topology = network.GetTopology(); //topology[i] is # of neurons of layer i
+ int[] topology = network.getTopology(); //topology[i] is # of neurons of layer i
    
- double[][][] weights = network.GetWeights();
- network.SetWeight(L,n2,n1,w); //sets the weight between layer L neuron n2 and layer L-1 neuron n1 to w
+ double[][][] weights = network.getWeights();
+ network.setWeight(L,n2,n1,w); //sets the weight between layer L neuron n2 and layer L-1 neuron n1 to w
 
- double[][] biases = network.GetBiases();
- network.SetBias(L,n,b); //sets the bias of layer L neuron n to b
+ double[][] biases = network.getBiases();
+ network.setBias(L,n,b); //sets the bias of layer L neuron n to b
 
- String activations = network.GetActivations();
- network.SetActivation(L,act); //sets the activation of layer L to act
+ String activations = network.getActivations();
+ network.setActivation(L,act); //sets the activation of layer L to act
 
- double[][] neurons = network.GetNeurons();
+ double[][] neurons = network.getNeurons();
  
  String info = network.toString();
  //the following two lines do the same thing
@@ -238,7 +240,7 @@ To use this neural network implementation, you can interact with a custom consol
 
 This will launch the program's custom console, allowing you to control and modify neural networks.
 
- Or, if you are just using the `NeuralNetwork` class, the jar packaging can be excluded, and you can compile and run your own Java files that import the `NeuralNetwork` class directly using the `import com.github.spaceshark123.neuralnetwork.NeuralNetwork;` statement.
+Or, if you are using the library, you can compile and run your own Java files that import the `NeuralNetwork` class directly using the `import com.github.spaceshark123.neuralnetwork.NeuralNetwork;` statement.
 
 #### Available Commands
 
