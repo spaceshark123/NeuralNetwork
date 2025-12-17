@@ -11,13 +11,13 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 import java.util.Collections;
 import java.io.FileWriter;
 import java.io.BufferedReader;
 import java.io.FileReader;
 
 import java.util.stream.IntStream;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.spaceshark123.neuralnetwork.callback.TrainingCallback;
@@ -64,7 +64,6 @@ public class NeuralNetwork implements Serializable {
 	// used in gradient descent
 	volatile protected double[][] avgBiasGradient;
 	volatile protected double[][][] avgWeightGradient;
-	protected Random r;
 
 	// takes in int[] for number of neurons in each layer and string[] for
 	// activations of each layer
@@ -77,7 +76,6 @@ public class NeuralNetwork implements Serializable {
 		biases = new double[numLayers][maxLayerSize];
 		weights = new double[numLayers][maxLayerSize][maxLayerSize];
 		activations = active.clone();
-		r = new Random();
 	}
 
 	public NeuralNetwork(int[] topology, String[] active, RegularizationType regularizationType,
@@ -93,31 +91,30 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	// initialize network with random starting values
-	public void Init(double biasSpread) {
-		ClearNeurons();
-		InitWeights();
-		InitBiases(biasSpread);
+	public void init(double biasSpread) {
+		clearNeurons();
+		initWeights();
+		initBiases(biasSpread);
 	}
 
 	// initialize network with random starting values using a specified weight
 	// initialization method ('he' or 'xavier')
-	public void Init(String weightInitMethod, double biasSpread) {
-		ClearNeurons();
-		InitWeights(weightInitMethod);
-		InitBiases(biasSpread);
+	public void init(String weightInitMethod, double biasSpread) {
+		clearNeurons();
+		initWeights(weightInitMethod);
+		initBiases(biasSpread);
 	}
 
-	void InitWeights(String initMethod) {
+	protected void initWeights(String initMethod) {
 		// initMethod is either "he" or "xavier"
 		if (initMethod.equals("he")) {
-			Random r = new Random();
 			for (int i = 1; i < numLayers; i++) {
 				int n = neuronsPerLayer[i - 1];
 				// he weight initialization (for relu) (gaussian distribution)
 				double mean = 0, std = Math.sqrt(2.0 / n);
 				for (int j = 0; j < neuronsPerLayer[i]; j++) {
 					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
-						weights[i][j][k] = r.nextGaussian() * std + mean;
+						weights[i][j][k] = ThreadLocalRandom.current().nextGaussian() * std + mean;
 					}
 				}
 
@@ -137,21 +134,20 @@ public class NeuralNetwork implements Serializable {
 				}
 			}
 		} else {
-			InitWeights();
+			initWeights();
 		}
 	}
 
-	void InitWeights() {
+	protected void initWeights() {
 		for (int i = 1; i < numLayers; i++) {
 			int n = neuronsPerLayer[i - 1];
 			double min, max;
 			if (activations[i].equals("relu")) {
 				// he weight initialization (for relu) (gaussian distribution)
-				Random r = new Random();
 				double mean = 0, std = Math.sqrt(2.0 / n);
 				for (int j = 0; j < neuronsPerLayer[i]; j++) {
 					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
-						weights[i][j][k] = r.nextGaussian() * std + mean;
+						weights[i][j][k] = ThreadLocalRandom.current().nextGaussian() * std + mean;
 					}
 				}
 			} else {
@@ -168,7 +164,7 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
-	void InitBiases(double spread) {
+	protected void initBiases(double spread) {
 		for (int i = 1; i < numLayers; i++) {
 			for (int j = 0; j < neuronsPerLayer[i]; j++) {
 				biases[i][j] = randDouble(-spread, spread);
@@ -176,66 +172,56 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
-	public double[][][] GetWeights() {
+	public double[][][] getWeights() {
 		return deepCopy(weights);
 	}
 
-	public void SetWeight(int layer, int outgoing, int incoming, double value) {
+	public void setWeight(int layer, int outgoing, int incoming, double value) {
 		weights[layer][outgoing][incoming] = value;
 	}
 
-	public double[][] GetBiases() {
+	public double[][] getBiases() {
 		return deepCopy(biases);
 	}
 
-	public void SetBias(int layer, int neuron, double bias) {
+	public void setBias(int layer, int neuron, double bias) {
 		biases[layer][neuron] = bias;
 	}
 
-	public String[] GetActivations() {
+	public String[] getActivations() {
 		return activations.clone();
 	}
 
-	public void SetActivation(int layer, String act) {
+	public void setActivation(int layer, String act) {
 		activations[layer] = act;
 	}
 
-	public double[][] GetNeurons() {
+	public double[][] getNeurons() {
 		return deepCopy(neurons);
 	}
 
-	public int[] GetTopology() {
+	public int[] getTopology() {
 		return neuronsPerLayer.clone();
 	}
 
-	public void SetRegularizationType(RegularizationType regularizationType) {
+	public void setRegularizationType(RegularizationType regularizationType) {
 		this.regularizationType = regularizationType;
 	}
 
-	public void SetRegularizationLambda(double lambda) {
+	public void setRegularizationLambda(double lambda) {
 		this.lambda = lambda;
 	}
 
-	public RegularizationType GetRegularizationType() {
+	public RegularizationType getRegularizationType() {
 		return regularizationType;
 	}
 
-	public double GetRegularizationLambda() {
+	public double getRegularizationLambda() {
 		return lambda;
 	}
 
-	double randDouble(double min, double max) {
-		return min + (max - min) * r.nextDouble();
-	}
-
-	int max(int[] arr) {
-		int m = -1;
-		for (int i : arr) {
-			if (i > m) {
-				m = i;
-			}
-		}
-		return m;
+	private double randDouble(double min, double max) {
+		return min + (max - min) * ThreadLocalRandom.current().nextDouble();
 	}
 
 	// Total regularization term calculation
@@ -264,27 +250,27 @@ public class NeuralNetwork implements Serializable {
 		return regTerm;
 	}
 
-	double linear_activation(double raw) {
+	protected double linear_activation(double raw) {
 		return raw;
 	}
 
-	double sigmoid_activation(double raw) {
+	protected double sigmoid_activation(double raw) {
 		return 1d / (1 + Math.exp(-raw));
 	}
 
-	double tanh_activation(double raw) {
+	protected double tanh_activation(double raw) {
 		return Math.tanh(raw);
 	}
 
-	double relu_activation(double raw) {
+	protected double relu_activation(double raw) {
 		return Math.max(0, raw);
 	}
 
-	double binary_activation(double raw) {
+	protected double binary_activation(double raw) {
 		return raw > 0 ? 1 : 0;
 	}
 
-	double softmax_activation(double raw, double[] neuronValues) {
+	protected double softmax_activation(double raw, double[] neuronValues) {
 		double maxVal = max(neuronValues);
 
 		// Compute the normalization factor (sum of exponentials)
@@ -296,12 +282,12 @@ public class NeuralNetwork implements Serializable {
 		return Math.exp(raw - maxVal - Math.log(total));
 	}
 
-	double softmax_der(double[] neuronValues, int index) {
+	protected double softmax_der(double[] neuronValues, int index) {
 		double softmax = softmax_activation(neuronValues[index], neuronValues);
 		return softmax * (1.0 - softmax);
 	}
 
-	double activate(double raw, int layer) {
+	protected double activate(double raw, int layer) {
 		switch (activations[layer]) {
 			case "linear":
 				return linear_activation(raw);
@@ -320,7 +306,7 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
-	double activate(double raw, int layer, double[] neuronsRaw) {
+	protected double activate(double raw, int layer, double[] neuronsRaw) {
 		switch (activations[layer]) {
 			case "linear":
 				return linear_activation(raw);
@@ -339,7 +325,7 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
-	double activate_der(double raw, int layer, int index) {
+	protected double activate_der(double raw, int layer, int index) {
 		double val;
 		switch (activations[layer]) {
 			case "linear":
@@ -367,7 +353,7 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
-	double activate_der(double raw, int layer, double[] neuronsRaw, int index) {
+	protected double activate_der(double raw, int layer, double[] neuronsRaw, int index) {
 		double val;
 		switch (activations[layer]) {
 			case "linear":
@@ -395,7 +381,7 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
-	void ClearNeurons() {
+	protected void clearNeurons() {
 		for (int i = 0; i < numLayers; i++) {
 			for (int j = 0; j < neurons[i].length; j++) {
 				neurons[i][j] = 0;
@@ -404,7 +390,7 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
-	void ClearNeurons(double[][] neurons, double[][] neuronsRaw) {
+	protected void clearNeurons(double[][] neurons, double[][] neuronsRaw) {
 		for (int i = 0; i < numLayers; i++) {
 			for (int j = 0; j < neurons[i].length; j++) {
 				neurons[i][j] = 0;
@@ -413,8 +399,8 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
-	public double[] Evaluate(double[] input, double[][] neurons, double[][] neuronsRaw) {
-		ClearNeurons(neurons, neuronsRaw);
+	public double[] evaluate(double[] input, double[][] neurons, double[][] neuronsRaw) {
+		clearNeurons(neurons, neuronsRaw);
 
 		// Set input neurons
 		IntStream.range(0, input.length).parallel().forEach(i -> neurons[0][i] = input[i]);
@@ -447,8 +433,8 @@ public class NeuralNetwork implements Serializable {
 		return Arrays.copyOfRange(neurons[numLayers - 1], 0, neuronsPerLayer[numLayers - 1]);
 	}
 
-	public double[] Evaluate(double[] input) {
-		ClearNeurons();
+	public double[] evaluate(double[] input) {
+		clearNeurons();
 
 		// Set input neurons
 		IntStream.range(0, input.length).parallel().forEach(i -> neurons[0][i] = input[i]);
@@ -504,7 +490,7 @@ public class NeuralNetwork implements Serializable {
 		return print.toString();
 	}
 
-	String printArr(int[] arr) {
+	private String printArr(int[] arr) {
 		if (arr == null)
 			return "[]";
 		if (arr.length == 0)
@@ -517,7 +503,7 @@ public class NeuralNetwork implements Serializable {
 		return print.toString();
 	}
 
-	String printArr(double[] arr) {
+	private String printArr(double[] arr) {
 		if (arr == null)
 			return "[]";
 		if (arr.length == 0)
@@ -530,7 +516,7 @@ public class NeuralNetwork implements Serializable {
 		return print.toString();
 	}
 
-	String printArr(String[] arr) {
+	private String printArr(String[] arr) {
 		if (arr == null)
 			return "[]";
 		if (arr.length == 0)
@@ -546,7 +532,7 @@ public class NeuralNetwork implements Serializable {
 	// save the neural network to a file directly as a java object
 	// not transferable between different programming languages and not human
 	// readable
-	public static void Save(NeuralNetwork network, String path) {
+	public static void save(NeuralNetwork network, String path) {
 		try {
 			FileOutputStream f = new FileOutputStream(path);
 			ObjectOutputStream o = new ObjectOutputStream(f);
@@ -561,14 +547,13 @@ public class NeuralNetwork implements Serializable {
 		} catch (IOException e) {
 			System.out.println("Error initializing stream");
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	// save the neural network to a file as a plain text file
 	// transferable between different programming languages and human readable
-	public static void SaveParameters(NeuralNetwork network, String path) {
+	public static void saveParameters(NeuralNetwork network, String path) {
 		BufferedWriter writer = null;
 		try {
 			FileWriter fWriter = new FileWriter(path);
@@ -609,21 +594,19 @@ public class NeuralNetwork implements Serializable {
 		} catch (IOException e) {
 			System.out.println("Error initializing stream");
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	// load a neural network from a file that was saved directly as a java object
 	// not transferable between different programming languages
-	public static NeuralNetwork Load(String path) {
+	public static NeuralNetwork load(String path) {
 		try {
 			FileInputStream fi = new FileInputStream(path);
 			ObjectInputStream oi = new ObjectInputStream(fi);
 
 			// Read objects
 			NeuralNetwork loadedNetwork = (NeuralNetwork) oi.readObject();
-			loadedNetwork.r = new Random();
 
 			oi.close();
 			fi.close();
@@ -634,7 +617,6 @@ public class NeuralNetwork implements Serializable {
 		} catch (IOException e) {
 			System.out.println("Error initializing stream");
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return null;
@@ -642,7 +624,7 @@ public class NeuralNetwork implements Serializable {
 
 	// load a neural network from a file that was saved as a plain text file
 	// transferable between different programming languages
-	public static NeuralNetwork LoadParameters(String path) {
+	public static NeuralNetwork loadParameters(String path) {
 		try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
 			String line;
 			NeuralNetwork network = new NeuralNetwork();
@@ -708,7 +690,6 @@ public class NeuralNetwork implements Serializable {
 						break;
 				}
 			}
-			network.r = new Random();
 			return network;
 		} catch (FileNotFoundException e) {
 			System.out.println("File not found");
@@ -723,7 +704,7 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	// chance is a number between 0 and 1
-	public void Mutate(double chance, double variation) {
+	public void mutate(double chance, double variation) {
 		// mutate weights
 		for (int i = 0; i < weights.length; i++) {
 			for (int j = 0; j < weights[0].length; j++) {
@@ -754,7 +735,7 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	// error functions
-	public double Cost(double[] output, double[] expected, String lossFunction) {
+	public double cost(double[] output, double[] expected, String lossFunction) {
 		double cost = 0;
 		if (output.length != expected.length) {
 			return -1;
@@ -781,7 +762,7 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	// error functions derivative
-	double cost_der(double predicted, double expected, String lossFunction) {
+	protected double cost_der(double predicted, double expected, String lossFunction) {
 		if (lossFunction.equals("sse")) {
 			return predicted - expected;
 		} else if (lossFunction.equals("mse")) {
@@ -792,12 +773,12 @@ public class NeuralNetwork implements Serializable {
 		return 1;
 	}
 
-	double[] Backpropagate(double[][] biasGrad, double[][][] weightGrad, double[] predicted, double[] expected,
+	private double[] backpropagate(double[][] biasGrad, double[][][] weightGrad, double[] predicted, double[] expected,
 			String lossFunction) {
-		return Backpropagate(this.neurons, this.neuronsRaw, biasGrad, weightGrad, predicted, expected, 1, lossFunction);
+		return backpropagate(this.neurons, this.neuronsRaw, biasGrad, weightGrad, predicted, expected, 1, lossFunction);
 	}
 
-	double[] Backpropagate(double[][] neurons, double[][] neuronsRaw, double[][] biasGrad, double[][][] weightGrad,
+	private double[] backpropagate(double[][] neurons, double[][] neuronsRaw, double[][] biasGrad, double[][][] weightGrad,
 			double[] predicted, double[] expected, int layer, String lossFunction) {
 		double[] neuronGradients = new double[neuronsPerLayer[layer]];
 
@@ -821,7 +802,7 @@ public class NeuralNetwork implements Serializable {
 		}
 
 		// recursive case
-		double[] nextLayerBackpropagate = Backpropagate(neurons, neuronsRaw, biasGrad, weightGrad, predicted, expected,
+		double[] nextLayerBackpropagate = backpropagate(neurons, neuronsRaw, biasGrad, weightGrad, predicted, expected,
 				layer + 1, lossFunction);
 		double nextLayerSum = 0;
 		double[] nextLayerWeightedSum = new double[neuronsPerLayer[layer]];
@@ -847,10 +828,11 @@ public class NeuralNetwork implements Serializable {
 		return Math.max(min, Math.min(max, value));
 	}
 
+	// for classification tasks, evaluates accuracy of the network on given dataset. outputs are expected to be one-hot encoded.
 	public double evaluateAccuracy(double[][] inputs, double[][] outputs) {
 		int numCorrect = 0;
 		for (int i = 0; i < inputs.length; i++) {
-			double[] predicted = Evaluate(inputs[i]); // Predict the output for each input
+			double[] predicted = evaluate(inputs[i]); // Predict the output for each input
 			int prediction = indexOf(predicted, max(predicted));
 			int actual = indexOf(outputs[i], max(outputs[i]));
 			if (prediction == actual) {
@@ -860,7 +842,7 @@ public class NeuralNetwork implements Serializable {
 		return (double) numCorrect / inputs.length;
 	}
 
-	public void Train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
+	public void train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
 			double learningRate, int batchSize,
 			String lossFunction, double decay, Optimizer optimizer, TrainingCallback callback) {
 		double lr = learningRate;
@@ -966,7 +948,7 @@ public class NeuralNetwork implements Serializable {
 				double[][][] thisWeightGradient = threadLocalWeightGradient.get();
 
 				// Calculate predicted output
-				double[] predicted = Evaluate(trainX[caseInd], thisNeurons, thisNeuronsRaw);
+				double[] predicted = evaluate(trainX[caseInd], thisNeurons, thisNeuronsRaw);
 
 				// If this is a classification network, count the number correct
 				if (displayAccuracy) {
@@ -988,7 +970,7 @@ public class NeuralNetwork implements Serializable {
 				}
 
 				// Do backpropagation
-				Backpropagate(thisNeurons, thisNeuronsRaw, thisBiasGradient, thisWeightGradient, predicted,
+				backpropagate(thisNeurons, thisNeuronsRaw, thisBiasGradient, thisWeightGradient, predicted,
 						trainY[caseInd], 1, lossFunction);
 
 				// Do weighted sum of gradients for average
@@ -1057,32 +1039,32 @@ public class NeuralNetwork implements Serializable {
 		System.out.println("average batch time: " + avgBatchTime + " seconds");
 	}
 
-	public void Train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
+	public void train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
 			double learningRate, int batchSize,
 			String lossFunction, double decay, Optimizer optimizer) {
-		Train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
+		train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
 	}
 
-	public void Train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
+	public void train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
 			double learningRate, int batchSize,
 			String lossFunction, double decay) {
-		Train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, decay,
+		train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, decay,
 				new SGD());
 	}
 
-	public void Train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
+	public void train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
 			double learningRate, int batchSize,
 			String lossFunction) {
-		Train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, 0);
+		train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, 0);
 	}
 
-	public void Train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
+	public void train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
 			double learningRate, int batchSize,
 			String lossFunction, Optimizer optimizer) {
-		Train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, 0, optimizer);
+		train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, 0, optimizer);
 	}
 
-	void progressBar(int width, String title, int current, int total, String subtitle) {
+	private void progressBar(int width, String title, int current, int total, String subtitle) {
 		String filled = "█";
 		String unfilled = "░";
 		double fill = (double) current / total;
@@ -1097,7 +1079,17 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
-	double max(double[] arr) {
+	private int max(int[] arr) {
+		int m = -1;
+		for (int i : arr) {
+			if (i > m) {
+				m = i;
+			}
+		}
+		return m;
+	}
+
+	private double max(double[] arr) {
 		double m = -1;
 		for (double i : arr) {
 			if (i > m) {
@@ -1107,7 +1099,7 @@ public class NeuralNetwork implements Serializable {
 		return m;
 	}
 
-	int indexOf(double[] arr, double v) {
+	private int indexOf(double[] arr, double v) {
 		int index = -1;
 		for (int i = 0; i < arr.length; i++) {
 			if (arr[i] == v) {
