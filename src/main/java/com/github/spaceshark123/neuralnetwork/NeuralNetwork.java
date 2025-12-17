@@ -670,35 +670,35 @@ public class NeuralNetwork implements Serializable {
 		return clone;
 	}
 
-	// error functions
-	public double cost(double[] output, double[] expected, String lossFunction) {
-		double cost = 0;
+	// loss functions
+	public double loss(double[] output, double[] expected, String lossFunction) {
+		double loss = 0;
 		if (output.length != expected.length) {
 			return -1;
 		}
 		if (lossFunction.equals("sse")) {
 			for (int i = 0; i < output.length; i++) {
-				double neuronCost = 0.5 * Math.pow(expected[i] - output[i], 2);
-				cost += neuronCost;
+				double neuronLoss = 0.5 * Math.pow(expected[i] - output[i], 2);
+				loss += neuronLoss;
 			}
 		} else if (lossFunction.equals("mse")) {
 			for (int i = 0; i < output.length; i++) {
-				double neuronCost = Math.pow(expected[i] - output[i], 2);
-				cost += neuronCost;
+				double neuronLoss = Math.pow(expected[i] - output[i], 2);
+				loss += neuronLoss;
 			}
-			cost /= output.length;
+			loss /= output.length;
 		} else if (lossFunction.equals("categorical_crossentropy")) {
 			for (int i = 0; i < output.length; i++) {
-				cost -= expected[i] * Math.log(output[i] + 1.0e-15d);
+				loss -= expected[i] * Math.log(output[i] + 1.0e-15d);
 			}
 		}
 		// add regularization term
-		cost += regularizationTerm();
-		return cost;
+		loss += regularizationTerm();
+		return loss;
 	}
 
 	// error functions derivative
-	protected double cost_der(double predicted, double expected, String lossFunction) {
+	protected double loss_der(double predicted, double expected, String lossFunction) {
 		if (lossFunction.equals("sse")) {
 			return predicted - expected;
 		} else if (lossFunction.equals("mse")) {
@@ -728,7 +728,7 @@ public class NeuralNetwork implements Serializable {
 					// Softmax with categorical crossentropy simplification to speed up computation
 					neuronGradients[i] = predicted[i] - expected[i];
 				} else {
-					neuronGradients[i] = cost_der(predicted[i], expected[i], lossFunction)
+					neuronGradients[i] = loss_der(predicted[i], expected[i], lossFunction)
 							* activate_der(neuronsRaw[layer][i], layer, neuronsRaw[layer], i);
 				}
 				biasGrad[layer][i] = 1 * neuronGradients[i];

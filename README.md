@@ -217,7 +217,7 @@ Optionally, provide a custom training callback by passing in a class implementin
  network.mutate(c, v); //mutates the network with chance c and variation v
  ```
 
-5. **Evaluation**: Use the trained model to make predictions and evaluate the cost
+5. **Evaluation**: Use the trained model to make predictions and evaluate the loss
 
   ```java
   double[] input = {...};
@@ -225,7 +225,7 @@ Optionally, provide a custom training callback by passing in a class implementin
   
   double[] expected = {...};
   String lossFunction = "mse"; // or "sse" or "categorical_crossentropy"
-  double cost = network.cost(prediction, expected, lossFunction);
+  double loss = network.loss(prediction, expected, lossFunction);
   ```
 
 6. **Save and Load**: Save the trained model to disk and load it for future use, either as a java object, which isn't human readable and doesn't transfer between programming languages but is faster, or a plain text file containing parameters, which is human readable and also transferrable between programming languages.
@@ -328,7 +328,7 @@ Or, if you are using the library, you can compile and run your own Java files th
 
 - `magnitude`: Display information about the magnitudes of the network's parameters (min/max/average)
 
-- `cost`: Calculate the cost/accuracy of the network on a test dataset
+- `loss`: Calculate the loss/accuracy of the network on a test dataset
 
 - `save`: Save the current neural network to a file for future use.
 

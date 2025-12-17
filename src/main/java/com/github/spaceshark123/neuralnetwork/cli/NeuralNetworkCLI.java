@@ -596,9 +596,9 @@ class NeuralNetworkCLI{
 						e.printStackTrace(); 
 						continue;
 					}
-				} else if(s[0].equals("cost")) {
+				} else if(s[0].equals("loss")) {
 					if(s.length < 2) {
-						Output("please specify a path to the test data and a training function:\n    - mse\n    - sse\n    - categorical_crossentropy");
+						Output("please specify a path to the test data and a loss function:\n    - mse\n    - sse\n    - categorical_crossentropy");
 						continue;
 					}
 					if(s[1].equals("mnist")) {
@@ -610,7 +610,7 @@ class NeuralNetworkCLI{
 						int numCorrect = 0;
 						int numCases = mnistImages.length;
 						final double weightedAvg = 1.0 / (double)numCases;
-						double avgCost = 0;
+						double avgLoss = 0;
 						//Random r = new Random();
 						for(int i = 0; i < numCases; i++) {
 							int index = i;
@@ -621,11 +621,11 @@ class NeuralNetworkCLI{
 							if(prediction == mnistLabels[index]) {
 								numCorrect++;
 							}
-							avgCost += nn.cost(output, mnistOutputs[index], "categorical_crossentropy") * weightedAvg;
+							avgLoss += nn.loss(output, mnistOutputs[index], "categorical_crossentropy") * weightedAvg;
 							progressBar(30, "calculating", i+1, numCases);
 						}
 						System.out.println();
-						System.out.println("accuracy: " + 100*((double) numCorrect / numCases) + "%, cost: " + avgCost);
+						System.out.println("accuracy: " + 100*((double) numCorrect / numCases) + "%, loss: " + avgLoss);
 						continue;
 					}
 					try {
@@ -667,11 +667,11 @@ class NeuralNetworkCLI{
 						}
 						System.out.println();
 						br.close();
-						double avgCost = 0;
+						double avgLoss = 0;
 						final double weightedAvg = 1/(double)numCases;
 						for(int i = 0; i < numCases; i++) {
 							double[] output = nn.evaluate(inputs[i]);
-							double c = nn.cost(output, outputs[i], s[2]);
+							double c = nn.loss(output, outputs[i], s[2]);
 							if(Double.isNaN(c)) {
 								Output("nan error at input #" + i);
 							}
@@ -681,10 +681,10 @@ class NeuralNetworkCLI{
 							// printArr(output);
 							// Output("expected: ");
 							// printArr(outputs[i]);
-							// Output("case " + i + " cost: " + c + " with loss function " + s[2]);
-							avgCost += c * weightedAvg;
+							// Output("case " + i + " loss: " + c + " with loss function " + s[2]);
+							avgLoss += c * weightedAvg;
 						}
-						System.out.println("cost: " + avgCost);
+						System.out.println("loss: " + avgLoss);
 					} catch(FileNotFoundException e) {
 						Output("file not found");
 						continue;
@@ -755,7 +755,7 @@ class NeuralNetworkCLI{
 					Output("min weight: " + minWeight + "\nmax weight: " + maxWeight + "average weight: " + avgWeight);
 				} else if(s[0].equals("help")) {
 					if(s.length == 1) {
-						Output("type help [command name] to get detailed usage info \ncommands: \n    - save\n    - load\n    - create\n    - init\n    - reset\n    - info\n    - evaluate\n    - exit\n    - modify\n    - regularization\n    - mutate\n    - train\n    - cost\n    - mnist\n    - magnitude\n    - help");
+						Output("type help [command name] to get detailed usage info \ncommands: \n    - save\n    - load\n    - create\n    - init\n    - reset\n    - info\n    - evaluate\n    - exit\n    - modify\n    - regularization\n    - mutate\n    - train\n    - loss\n    - mnist\n    - magnitude\n    - help");
 					} else {
 						if(s[1].equals("save")) {
 							Output("syntax: save [path] [object/parameters]\nsaves the current neural network to the specified file path as a java object or as a text file with parameters. text files are human readable and contain biases and activations for the input layer even though they are not used. the weights are saved as a 3D array with the first dimension being the layer (excluding the input layer), the second dimension being the neuron, and the third dimension being the incoming neuron from the previous layer");
@@ -781,8 +781,8 @@ class NeuralNetworkCLI{
 							Output("syntax: mutate [mutation chance decimal] [variation]\nmutates neural network to simulate evolution. useful for genetic algorithms");
 						} else if(s[1].equals("train")) {
 							Output("syntax: train [data file path/'mnist'] [train/test split ratio, number between 0 and 1] [epochs] [learning rate] [loss function] [optimizer] [optional: 'custom', for custom optimizer hyperparameters] [optional: batch size, default=input size] [optional: decay rate, default=0] [optional: clip threshold, default=1]\ntrains neural network on specified training/test data or mnist dataset based on specified hyperparameters and optimizer\n\nloss function choices are\n    - mse\n    - sse\n    - categorical_crossentropy\n\noptimizer choices are:\n    - sgd\n    - sgdmomentum (momentum, default=0.9)\n    - adagrad\n    - rmsprop (decay rate, default=0.9)\n    - adam (beta1, default=0.9) (beta2, default=0.999)\n\ntraining data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
-						} else if(s[1].equals("cost")) {
-							Output("syntax: cost [test data file path] [loss function] or cost mnist\nreturns the average cost of the neural network for the specified dataset or the accuracy percentage for the mnist dataset. loss function choices are\n    - mse\n    - sse\n    - categorical_crossentropy\ntest data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
+						} else if(s[1].equals("loss")) {
+							Output("syntax: loss [test data file path] [loss function] or loss mnist\nreturns the average cross entropy loss of the neural network for the specified dataset or the accuracy percentage for the mnist dataset. loss function choices are\n    - mse\n    - sse\n    - categorical_crossentropy\ntest data file must be formatted as:\n[number of cases] [input size] [output size]\n[case 1 inputs separated by spaces] = [case 1 outputs separated by spaces]\n[case 2 inputs separated by spaces] = [case 2 outputs separated by spaces]...");
 						} else if(s[1].equals("help")) {
 							Output("syntax: help [optional: command name]\nhelp command");
 						} else if(s[1].equals("mnist")) {
