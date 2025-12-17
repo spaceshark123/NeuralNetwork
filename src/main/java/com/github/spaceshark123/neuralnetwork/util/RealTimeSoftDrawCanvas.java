@@ -1,4 +1,4 @@
-package com.github.spaceshark123.neuralnetwork;
+package com.github.spaceshark123.neuralnetwork.util;
 
 import javax.swing.*;
 import java.awt.*;

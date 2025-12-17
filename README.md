@@ -58,6 +58,7 @@ The following packages are available for use:
 - `com.github.spaceshark123.neuralnetwork.optimizer`: Contains optimizer implementations and the `Optimizer` interface for creating custom optimizers.
 - `com.github.spaceshark123.neuralnetwork.activation`: Contains the `ActivationFunction` interface and various activation function implementations (Linear, Sigmoid, Tanh, ReLU, LeakyReLU, Binary, Softmax) for use in the neural network.
 - `com.github.spaceshark123.neuralnetwork.callback`: Contains the `TrainingCallback` interface for creating custom training callbacks and the `ChartUpdater` class for visualizing accuracy data in realtime during training.
+- `com.github.spaceshark123.neuralnetwork.util`: Contains utility classes like `RealTimeSoftDrawCanvas` for the MNIST drawing tool.
 - `com.github.spaceshark123.neuralnetwork.experimental`: Contains experimental and not fully implemented classes like `ConvolutionalNeuralNetwork`. DO NOT USE THESE CLASSES.
 
 For use in your own Java projects, simply import the relevant packages/classes and it will immediately be usable. The following section covers the proper syntax for:

@@ -22,10 +22,10 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 import com.github.spaceshark123.neuralnetwork.NeuralNetwork;
-import com.github.spaceshark123.neuralnetwork.RealTimeSoftDrawCanvas;
 import com.github.spaceshark123.neuralnetwork.activation.ActivationFunction;
 import com.github.spaceshark123.neuralnetwork.callback.ChartUpdater;
 import com.github.spaceshark123.neuralnetwork.optimizer.*;
+import com.github.spaceshark123.neuralnetwork.util.RealTimeSoftDrawCanvas;
 
 class NeuralNetworkCLI{
 	public static int SIZE = 1000;
