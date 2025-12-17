@@ -29,7 +29,7 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 - **Customizable Topology**: Define the number of neurons in each layer and activation functions for each layer.
   
-- **Multiple Activation Functions**: Supports popular activation functions including linear, sigmoid, tanh, relu, binary, and softmax.
+- **Multiple Activation Functions**: Supports popular activation functions including linear, sigmoid, tanh, relu, leaky relu, binary, and softmax.
 
 - **Multiple Loss Functions**:  Supports major loss/error functions: Mean Squared Error, Sum Squared Error, and Categorical Cross-Entropy.
 
@@ -52,18 +52,24 @@ Neural networks are a fundamental building block of modern machine learning and 
 ## Internal Usage
 
 The following packages are available for use:
+
 - `com.github.spaceshark123.neuralnetwork`: Contains the main `NeuralNetwork` class and related interfaces for optimizers and training callbacks.
 - `com.github.spaceshark123.neuralnetwork.cli`: Contains the console interface for user interaction with the neural network. Intended for direct program running rather than import.
 - `com.github.spaceshark123.neuralnetwork.optimizer`: Contains optimizer implementations and the `Optimizer` interface for creating custom optimizers.
+- `com.github.spaceshark123.neuralnetwork.activation`: Contains the `ActivationFunction` interface and various activation function implementations (Linear, Sigmoid, Tanh, ReLU, LeakyReLU, Binary, Softmax) for use in the neural network.
 - `com.github.spaceshark123.neuralnetwork.callback`: Contains the `TrainingCallback` interface for creating custom training callbacks and the `ChartUpdater` class for visualizing accuracy data in realtime during training.
 
 For use in your own Java projects, simply import the relevant packages/classes and it will immediately be usable. The following section covers the proper syntax for:
 
-1. **Initialize the Neural Network**: Create a neural network by specifying the topology (number of neurons in each layer) and activation functions (from the `NeuralNetwork.ActivationFunction` enum).
+1. **Initialize the Neural Network**: Create a neural network by specifying the topology (number of neurons in each layer) and activation functions (from the `com.github.spaceshark123.neuralnetwork.activation` package).
 
    ```java
    int[] topology = {inputSize, hiddenLayerSize, outputSize};
-   NeuralNetwork.ActivationFunction[] activations = {NeuralNetwork.ActivationFunction.LINEAR, NeuralNetwork.ActivationFunction.RELU, NeuralNetwork.ActivationFunction.SOFTMAX};
+   ActivationFunction[] activations = {
+      new ReLU(), // example of relu activation
+      new LeakyReLU(0.01), // example of leaky relu with alpha = 0.01
+      new Softmax() // example of softmax activation
+   };
    NeuralNetwork network = new NeuralNetwork(topology, activations);
    network.init(0.1); //initializes weights and biases according to spread amount
    ```
@@ -91,7 +97,7 @@ For use in your own Java projects, simply import the relevant packages/classes a
    network.train(trainInputs, trainOutputs, testInputs, testOutputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
    ```
 
- optimizers implement the `Optimizer` interface and included optimizers are found in the `com.github.spaceshark123.neuralnetwork.optimizer` package. Included optimizers are:
+optimizers implement the `Optimizer` interface and included optimizers are found in the `com.github.spaceshark123.neuralnetwork.optimizer` package. Included optimizers are:
 
 - `SGD()`
 - `SGDMomentum(double momentum)`
@@ -99,27 +105,7 @@ For use in your own Java projects, simply import the relevant packages/classes a
 - `RMSProp(double decayRate)`
 - `Adam(double beta1, double beta2)`
 
-   Optionally, provide a custom training callback by passing in a class implementing the `TrainingCallback` interface from the `com.github.spaceshark123.neuralnetwork.callback` package as an argument. This can be used to make your own custom train addons like a graph visualization of the data. The `ChartUpdater` class has been provided in the same package to visualize accuracy data using this callback interface.
-
- ```java
- public class Callback implements TrainingCallback {
-  //testAccuracy is -1 if the current mini-batch doesn't have a test accuracy
-  @Override
-  public void onEpochUpdate(int epoch, int batch, double progress, double trainAccuracy, double testAccuracy) {
-   System.out.println("this statement is run for every mini-batch in training");
-  }
- }
-
- class Main {
-  public static void main(String[] args) {
-   ...
-   Callback callback = new Callback();
-   network.train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, callback);
-  }
- }
- ```
-
- Also, custom optimizers can be made by creating a class implementing the `Optimizer` interface. This can be used to create other optimizers not already included in the NeuralNetwork class.
+Custom optimizers can be made by creating a class implementing the `Optimizer` interface from the `com.github.spaceshark123.neuralnetwork.optimizer` package. This can be used to create other optimizers not already included in the NeuralNetwork class.
 
  ```java
  public static class CustomOptimizer implements Optimizer {
@@ -149,6 +135,78 @@ For use in your own Java projects, simply import the relevant packages/classes a
      }
     }
    }
+  }
+ }
+ ```
+
+Activation functions implement the `ActivationFunction` interface and are found in the `com.github.spaceshark123.neuralnetwork.activation` package. Included activation functions are:
+
+- `Linear()`
+- `Sigmoid()`
+- `Tanh()`
+- `ReLU()`
+- `LeakyReLU(double alpha)`
+- `Binary()`
+- `Softmax()`
+
+Custom activation functions can be created by implementing the `ActivationFunction` interface and registering them as a valid activation function with the `ActivationFunctionFactory` using its `register` method. The following example shows how to create a custom activation function with one parameter `param1` and register it with the factory.
+
+```java
+ public class CustomActivation implements ActivationFunction {
+private final double param1;
+
+ public CustomActivation(double param1) {
+   this.param1 = param1;
+ }
+
+  @Override
+  public double activate(double x) {
+   //custom activation code
+   ...
+  }
+
+  @Override
+  public double derivative(double x) {
+   //custom derivative code
+   ...
+  }
+
+  @Override
+  public String getName() {
+   return "CUSTOM"; // display name of activation function
+ }
+
+ @Override
+ public String toConfigString() {
+  return "CUSTOM(param1=" + param1 + ")"; // string used in config/saved files to uniquely identify this activation function
+ }
+}
+
+ //register the custom activation function with the factory
+ ActivationFunctionFactory.register("CUSTOM", params -> {
+    double param1 = params.containsKey("param1")
+        ? Double.parseDouble(params.get("param1")) 
+        : 1.0;
+    return new CustomActivation(param1);
+});
+```
+
+Optionally, provide a custom training callback by passing in a class implementing the `TrainingCallback` interface from the `com.github.spaceshark123.neuralnetwork.callback` package as an argument. This can be used to make your own custom train addons like a graph visualization of the data. The `ChartUpdater` class has been provided in the same package to visualize accuracy data using this callback interface.
+
+ ```java
+ public class Callback implements TrainingCallback {
+  //testAccuracy is -1 if the current mini-batch doesn't have a test accuracy
+  @Override
+  public void onEpochUpdate(int epoch, int batch, double progress, double trainAccuracy, double testAccuracy) {
+   System.out.println("this statement is run for every mini-batch in training");
+  }
+ }
+
+ class Main {
+  public static void main(String[] args) {
+   ...
+   Callback callback = new Callback();
+   network.train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, callback);
   }
  }
  ```
@@ -188,7 +246,7 @@ For use in your own Java projects, simply import the relevant packages/classes a
 
 - `numlayers`: contains an integer for the number of layers in the network. usually the first line.
 - `topology`: contains `numlayers` integers describing the number of neurons in each layer. usually the second line.
-- `activations`: contains `numlayers` strings describing the activation functions for each layer. This includes the input layer, even though it is never used. The valid activation functions are: LINEAR, SIGMOID, TANH, RELU, BINARY, SOFTMAX, as defined in the `NeuralNetwork.ActivationFunction` enum.
+- `activations`: contains `numlayers` strings describing the activation functions for each layer. This includes the input layer, even though it is never used. The valid activation functions are contained in the registered activation functions of the `ActivationFunctionFactory` class. By default, these are: LINEAR, SIGMOID, TANH, RELU, LEAKYRELU(param1={value}), BINARY, SOFTMAX.
 - `regularization`: contains an all-caps string describing the mode of regularization and a decimal for the lambda value (regularization strength)
 - `biases`: contains all the biases for all the layers. in order from input to output layer, first neuron to last neuron for each layer. includes the input layer, even though it is never used.
 - `weights`: contains all the weights. Internally, weights is represented as a 3D array with 1st dimension layer, 2nd dimension neuron #, and 3rd dimension incoming neuron # from previous layer. All weights are flattened into series in order from input to output layer, first neuron to last neuron for each layer, and first neuron to last neuron for each previous layer.
@@ -205,8 +263,8 @@ For use in your own Java projects, simply import the relevant packages/classes a
  double[][] biases = network.getBiases();
  network.setBias(L,n,b); //sets the bias of layer L neuron n to b
 
- NeuralNetwork.ActivationFunction[] activations = network.getActivations();
- network.setActivation(L,NeuralNetwork.ActivationFunction.RELU); //sets the activation of layer L to relu
+ ActivationFunction[] activations = network.getActivations();
+ network.setActivation(L,new ReLU()); //sets the activation of layer L to relu
 
  double[][] neurons = network.getNeurons();
  
