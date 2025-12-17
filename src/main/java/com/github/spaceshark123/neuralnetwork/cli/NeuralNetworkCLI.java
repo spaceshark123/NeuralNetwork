@@ -174,7 +174,7 @@ class NeuralNetworkCLI{
 						Output("initializing weights and biases...");
 						nn.init(Double.parseDouble(s[1]));
 						if(s.length >= 3) {
-							nn.init(s[2], Double.parseDouble(s[1]));
+							nn.init(NeuralNetwork.WeightInitMethod.valueOf(s[2].toUpperCase()), Double.parseDouble(s[1]));
 						}
 					} else {
 						Output("please specify a bias spread and optionally a weight initialization method ('he' or 'xavier')");

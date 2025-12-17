@@ -61,6 +61,12 @@ public class NeuralNetwork implements Serializable {
 		L2
 	}
 
+	public static enum WeightInitMethod {
+		RANDOM,
+		HE,
+		XAVIER
+	}
+
 	// Regularization settings (lambda = regularization strength)
 	protected double lambda = 0;
 	protected RegularizationType regularizationType = RegularizationType.NONE;
@@ -93,6 +99,10 @@ public class NeuralNetwork implements Serializable {
 
 	}
 
+	public void init() {
+		init(0);
+	}
+
 	// initialize network with random starting values
 	public void init(double biasSpread) {
 		clearNeurons();
@@ -102,15 +112,15 @@ public class NeuralNetwork implements Serializable {
 
 	// initialize network with random starting values using a specified weight
 	// initialization method ('he' or 'xavier')
-	public void init(String weightInitMethod, double biasSpread) {
+	public void init(WeightInitMethod weightInitMethod, double biasSpread) {
 		clearNeurons();
 		initWeights(weightInitMethod);
 		initBiases(biasSpread);
 	}
 
-	protected void initWeights(String initMethod) {
+	protected void initWeights(WeightInitMethod initMethod) {
 		// initMethod is either "he" or "xavier"
-		if (initMethod.equals("he")) {
+		if (initMethod == WeightInitMethod.HE) {
 			for (int i = 1; i < numLayers; i++) {
 				int n = neuronsPerLayer[i - 1];
 				// he weight initialization (for relu) (gaussian distribution)
@@ -122,7 +132,7 @@ public class NeuralNetwork implements Serializable {
 				}
 
 			}
-		} else if (initMethod.equals("xavier")) {
+		} else if (initMethod == WeightInitMethod.XAVIER) {
 			for (int i = 1; i < numLayers; i++) {
 				int n = neuronsPerLayer[i - 1];
 				double min, max;
@@ -136,11 +146,23 @@ public class NeuralNetwork implements Serializable {
 					}
 				}
 			}
+		} else if (initMethod == WeightInitMethod.RANDOM) {
+			for (int i = 1; i < numLayers; i++) {
+				double min = -1;
+				double max = 1;
+				// random weight initialization (uniform distribution)
+				for (int j = 0; j < neuronsPerLayer[i]; j++) {
+					for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
+						weights[i][j][k] = randDouble(min, max);
+					}
+				}
+			}
 		} else {
-			initWeights();
+			initWeights(); // default initialization
 		}
 	}
 
+	// default weight initialization (automatically chooses he or xavier based on activation)
 	protected void initWeights() {
 		for (int i = 1; i < numLayers; i++) {
 			int n = neuronsPerLayer[i - 1];
@@ -228,7 +250,7 @@ public class NeuralNetwork implements Serializable {
 	}
 
 	// Total regularization term calculation
-	double regularizationTerm() {
+	protected double regularizationTerm() {
 		double regTerm = 0.0;
 		if (regularizationType == RegularizationType.L1) {
 			// L1 regularization
