@@ -59,11 +59,11 @@ The following packages are available for use:
 
 For use in your own Java projects, simply import the relevant packages/classes and it will immediately be usable. The following section covers the proper syntax for:
 
-1. **Initialize the Neural Network**: Create a neural network by specifying the topology (number of neurons in each layer) and activation functions.
+1. **Initialize the Neural Network**: Create a neural network by specifying the topology (number of neurons in each layer) and activation functions (from the `NeuralNetwork.ActivationFunction` enum).
 
    ```java
    int[] topology = {inputSize, hiddenLayerSize, outputSize};
-   String[] activations = {"linear", "relu", "softmax"};
+   NeuralNetwork.ActivationFunction[] activations = {NeuralNetwork.ActivationFunction.LINEAR, NeuralNetwork.ActivationFunction.RELU, NeuralNetwork.ActivationFunction.SOFTMAX};
    NeuralNetwork network = new NeuralNetwork(topology, activations);
    network.init(0.1); //initializes weights and biases according to spread amount
    ```
@@ -188,7 +188,7 @@ For use in your own Java projects, simply import the relevant packages/classes a
 
 - `numlayers`: contains an integer for the number of layers in the network. usually the first line.
 - `topology`: contains `numlayers` integers describing the number of neurons in each layer. usually the second line.
-- `activations`: contains `numlayers` strings describing the activation functions for each layer. This includes the input layer, even though it is never used.
+- `activations`: contains `numlayers` strings describing the activation functions for each layer. This includes the input layer, even though it is never used. The valid activation functions are: LINEAR, SIGMOID, TANH, RELU, BINARY, SOFTMAX, as defined in the `NeuralNetwork.ActivationFunction` enum.
 - `regularization`: contains an all-caps string describing the mode of regularization and a decimal for the lambda value (regularization strength)
 - `biases`: contains all the biases for all the layers. in order from input to output layer, first neuron to last neuron for each layer. includes the input layer, even though it is never used.
 - `weights`: contains all the weights. Internally, weights is represented as a 3D array with 1st dimension layer, 2nd dimension neuron #, and 3rd dimension incoming neuron # from previous layer. All weights are flattened into series in order from input to output layer, first neuron to last neuron for each layer, and first neuron to last neuron for each previous layer.
@@ -205,8 +205,8 @@ For use in your own Java projects, simply import the relevant packages/classes a
  double[][] biases = network.getBiases();
  network.setBias(L,n,b); //sets the bias of layer L neuron n to b
 
- String activations = network.getActivations();
- network.setActivation(L,act); //sets the activation of layer L to act
+ NeuralNetwork.ActivationFunction[] activations = network.getActivations();
+ network.setActivation(L,NeuralNetwork.ActivationFunction.RELU); //sets the activation of layer L to relu
 
  double[][] neurons = network.getNeurons();
  

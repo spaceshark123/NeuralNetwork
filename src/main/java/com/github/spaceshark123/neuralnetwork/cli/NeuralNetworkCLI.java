@@ -48,12 +48,12 @@ class NeuralNetworkCLI{
 							if (s[2].equals("object")) {
 								//object mode
 								Output("loading...");
-								nn = NeuralNetwork.Load(s[1]);
+								nn = NeuralNetwork.load(s[1]);
 								continue;
 							} else if (s[2].equals("parameters")) {
 								//parameter mode
 								Output("loading...");
-								nn = NeuralNetwork.LoadParameters(s[1]);
+								nn = NeuralNetwork.loadParameters(s[1]);
 								continue;
 							} else {
 								//object or parameter mode not specified
@@ -73,12 +73,12 @@ class NeuralNetworkCLI{
 							if (s[2].equals("object")) {
 								//object mode
 								Output("saving...");
-								NeuralNetwork.Save(nn, s[1]);
+								NeuralNetwork.save(nn, s[1]);
 								continue;
 							} else if (s[2].equals("parameters")) {
 								//parameter mode
 								Output("saving...");
-								NeuralNetwork.SaveParameters(nn, s[1]);
+								NeuralNetwork.saveParameters(nn, s[1]);
 								continue;
 							} else {
 								//object or parameter mode not specified
@@ -105,26 +105,26 @@ class NeuralNetworkCLI{
 					} else {
 						if(s[1].equals("activations")) {
 							System.out.print("activations: ");
-							printArr(nn.GetActivations());
+							printArr(Arrays.stream(nn.getActivations()).map(Enum::toString).toArray(String[]::new));
 						} else if(s[1].equals("topology")) {
 							System.out.print("topology: ");
-							printArr(nn.GetTopology());
+							printArr(nn.getTopology());
 						} else if(s[1].equals("regularization")) {
-							System.out.println("regularization: " + nn.GetRegularizationType().toString() + " lambda: " + nn.GetRegularizationLambda());
+							System.out.println("regularization: " + nn.getRegularizationType().toString() + " lambda: " + nn.getRegularizationLambda());
 						} else if(s[1].equals("biases")) {
 							String print = "";
 							print += "\nBiases:\n";
 							for(int i = 0; i < nn.numLayers; i++) {
-								print += "Layer " + (i+1) + ": " + returnArr(Arrays.copyOfRange(nn.GetBiases()[i],0,nn.GetTopology()[i])) + "\n";
+								print += "Layer " + (i+1) + ": " + returnArr(Arrays.copyOfRange(nn.getBiases()[i],0,nn.getTopology()[i])) + "\n";
 							}
 							Output(print);
 						} else if(s[1].equals("weights")) {
 							String print = "";
 							print += "\nWeights:\n";
 							for(int i = 1; i < nn.numLayers; i++) {
-								for(int j = 0; j < nn.GetTopology()[i]; j++) {
+								for(int j = 0; j < nn.getTopology()[i]; j++) {
 									//each neuron
-									print += "    Neuron " + (j+1) + " of Layer " + (i+1) + " Weights: \n" + returnArr(Arrays.copyOfRange(nn.GetWeights()[i][j],0,nn.GetTopology()[i-1])) + "\n"; 
+									print += "    Neuron " + (j+1) + " of Layer " + (i+1) + " Weights: \n" + returnArr(Arrays.copyOfRange(nn.getWeights()[i][j],0,nn.getTopology()[i-1])) + "\n"; 
 								}
 							}
 							Output(print);
@@ -152,19 +152,28 @@ class NeuralNetworkCLI{
 					Output("Activations for each layer (separated by spaces): ");
 					Output("Choices: \n    - linear\n    - sigmoid\n    - tanh\n    - relu\n    - binary\n    - softmax");
 					ls = Input(scan).split(" ");
-					if(ls.length != topology.length) {
+					if (ls.length != topology.length) {
 						Output("mismatch in number of layers");
 						continue;
 					}
-					nn = new NeuralNetwork(topology, ls);
+					NeuralNetwork.ActivationFunction[] as = new NeuralNetwork.ActivationFunction[topology.length];
+					for (int i = 0; i < ls.length; i++) {
+						try {
+							as[i] = NeuralNetwork.ActivationFunction.valueOf(ls[i].toUpperCase());
+						} catch (IllegalArgumentException e) {
+							Output("invalid activation function: " + ls[i]);
+							continue;
+						}
+					}
+					nn = new NeuralNetwork(topology, as);
 					Output("Created neural network");
 				} else if(s[0].equals("init")) {
 					//initialize neural network
 					if(s.length >= 2) {
 						Output("initializing weights and biases...");
-						nn.Init(Double.parseDouble(s[1]));
+						nn.init(Double.parseDouble(s[1]));
 						if(s.length >= 3) {
-							nn.Init(s[2], Double.parseDouble(s[1]));
+							nn.init(s[2], Double.parseDouble(s[1]));
 						}
 					} else {
 						Output("please specify a bias spread and optionally a weight initialization method ('he' or 'xavier')");
@@ -184,13 +193,13 @@ class NeuralNetworkCLI{
 							continue;
 						}
 						if(s[2].equalsIgnoreCase("none")) {
-							nn.SetRegularizationType(NeuralNetwork.RegularizationType.NONE);
+							nn.setRegularizationType(NeuralNetwork.RegularizationType.NONE);
 							Output("applying regularization...");
 						} else if(s[2].equalsIgnoreCase("L1")) {
-							nn.SetRegularizationType(NeuralNetwork.RegularizationType.L1);
+							nn.setRegularizationType(NeuralNetwork.RegularizationType.L1);
 							Output("applying regularization...");
 						} else if(s[2].equalsIgnoreCase("L2")) {
-							nn.SetRegularizationType(NeuralNetwork.RegularizationType.L2);
+							nn.setRegularizationType(NeuralNetwork.RegularizationType.L2);
 							Output("applying regularization...");
 						} else {
 							//invalid type is provided
@@ -203,7 +212,7 @@ class NeuralNetworkCLI{
 							Output("please specify a regularization lambda (strength) to set.");
 							continue;
 						}
-						nn.SetRegularizationLambda(Double.parseDouble(s[2]));
+						nn.setRegularizationLambda(Double.parseDouble(s[2]));
 						Output("setting lambda...");
 					} else {
 						//invalid argument is provided
@@ -219,7 +228,7 @@ class NeuralNetworkCLI{
 							}
 							int index = Integer.parseInt(s[2]);
 							showImage(mnistImages[index], 28, 28);
-							double[] output = nn.Evaluate(mnistImages[index]);
+							double[] output = nn.evaluate(mnistImages[index]);
 							Output("predicted: " + indexOf(output, max(output)));
 							Output("actual: " + mnistLabels[index]);
 							System.out.print("output: ");
@@ -227,17 +236,17 @@ class NeuralNetworkCLI{
 							continue;
 						}
 					}
-					Output(nn.GetTopology()[0] + " input(s) (separated by spaces): ");
+					Output(nn.getTopology()[0] + " input(s) (separated by spaces): ");
 					String[] ls = Input(scan).split(" ");
-					double[] input = new double[nn.GetTopology()[0]];
-					if(ls.length != nn.GetTopology()[0]) {
+					double[] input = new double[nn.getTopology()[0]];
+					if(ls.length != nn.getTopology()[0]) {
 						Output("mismatch in number of inputs");
 						continue;
 					}
 					for(int i = 0; i < ls.length; i++) {
 						input[i] = Double.parseDouble(ls[i]);
 					}
-					printArr(nn.Evaluate(input));
+					printArr(nn.evaluate(input));
 				} else if(s[0].equals("reset")) {
 					Output("resetting network...");
 					nn = new NeuralNetwork();
@@ -253,7 +262,12 @@ class NeuralNetworkCLI{
 							}
 							Output("enter the new activation: ");
 							Output("Choices: \n    - linear\n    - sigmoid\n    - tanh\n    - relu\n    - binary\n    - softmax");
-							nn.SetActivation(layer, Input(scan));
+							try {
+								nn.setActivation(layer, NeuralNetwork.ActivationFunction.valueOf(Input(scan).toUpperCase()));
+							} catch (IllegalArgumentException e) {
+								Output("invalid activation function");
+								continue;
+							}
 							Output("making modification...");
 						} else if(s[1].equals("weights")) {
 							Output("enter the layer of the end neuron (1 is first layer): ");
@@ -265,20 +279,20 @@ class NeuralNetworkCLI{
 							}
 							Output("enter the neuron # of the end neuron (1 is first neuron): ");
 							int end = Integer.parseInt(Input(scan)) - 1;
-							if(end >= nn.GetTopology()[layer] || end < 0) {
+							if(end >= nn.getTopology()[layer] || end < 0) {
 								//not a valid layer #
 								Output("not a valid neuron #");
 								continue;
 							}
 							Output("enter the neuron # of the start neuron from the previous layer (1 is first neuron): ");
 							int start = Integer.parseInt(Input(scan)) - 1;
-							if(start >= nn.GetTopology()[layer-1] || start < 0) {
+							if(start >= nn.getTopology()[layer-1] || start < 0) {
 								//not a valid layer #
 								Output("not a valid neuron #");
 								continue;
 							}
 							Output("enter the new weight: ");
-							nn.SetWeight(layer, end, start, Double.parseDouble(Input(scan)));
+							nn.setWeight(layer, end, start, Double.parseDouble(Input(scan)));
 							Output("setting weight...");
 						} else if(s[1].equals("biases")) {
 							Output("enter the layer of the neuron (1 is first layer): ");
@@ -290,13 +304,13 @@ class NeuralNetworkCLI{
 							}
 							Output("enter the neuron # (1 is first neuron): ");
 							int end = Integer.parseInt(Input(scan)) - 1;
-							if(end >= nn.GetTopology()[layer] || end < 0) {
+							if(end >= nn.getTopology()[layer] || end < 0) {
 								//not a valid layer #
 								Output("not a valid neuron #");
 								continue;
 							}
 							Output("enter the new bias: ");
-							nn.SetBias(layer, end, Double.parseDouble(Input(scan)));
+							nn.setBias(layer, end, Double.parseDouble(Input(scan)));
 							Output("setting bias...");
 						} else {
 							//modify argument isnt valid
@@ -311,7 +325,7 @@ class NeuralNetworkCLI{
 				} else if(s[0].equals("mutate")) {
 					if(s.length >= 3) {
 						Output("mutating...");
-						nn.Mutate(Double.parseDouble(s[1]), Double.parseDouble(s[2]));
+						nn.mutate(Double.parseDouble(s[1]), Double.parseDouble(s[2]));
 					} else {
 						Output("please specify the mutation chance (decimal) and variation");
 						continue;
@@ -435,7 +449,7 @@ class NeuralNetworkCLI{
 										(int) (mnistOutputs.length * splitRatio));
 								double[][] testOutputs = Arrays.copyOfRange(mnistOutputs, (int) (mnistOutputs.length * splitRatio),
 										mnistOutputs.length);
-								nn.Train(trainImages, trainOutputs, testImages, testOutputs, epochs, Double.parseDouble(s[4]), batchSize, lossFunction, decay, optimizer, chartUpdater);
+								nn.train(trainImages, trainOutputs, testImages, testOutputs, epochs, Double.parseDouble(s[4]), batchSize, lossFunction, decay, optimizer, chartUpdater);
 							}
 						} else {
 							//train on custom file
@@ -448,7 +462,7 @@ class NeuralNetworkCLI{
 							int inputSize = Integer.parseInt(st.nextToken());
 							int outputSize = Integer.parseInt(st.nextToken());
 		
-							if(inputSize != nn.GetTopology()[0] || outputSize != nn.GetTopology()[nn.numLayers-1]) {
+							if(inputSize != nn.getTopology()[0] || outputSize != nn.getTopology()[nn.numLayers-1]) {
 								//sizes dont match
 								Output("input/output sizes dont match the network");
 								continue;
@@ -571,7 +585,7 @@ class NeuralNetworkCLI{
 									(int) (outputs.length * splitRatio));
 							double[][] testOutputs = Arrays.copyOfRange(outputs, (int) (outputs.length * splitRatio),
 									outputs.length);
-							nn.Train(trainInputs, trainOutputs, testInputs, testOutputs, Integer.parseInt(s[3]), Double.parseDouble(s[4]), batchSize, lossFunction, decay, optimizer, null);
+							nn.train(trainInputs, trainOutputs, testInputs, testOutputs, Integer.parseInt(s[3]), Double.parseDouble(s[4]), batchSize, lossFunction, decay, optimizer, null);
 						}
 					} catch(FileNotFoundException e) {
 						Output("file not found");
@@ -600,13 +614,13 @@ class NeuralNetworkCLI{
 						for(int i = 0; i < numCases; i++) {
 							int index = i;
 
-							double[] output = nn.Evaluate(mnistImages[index]);
+							double[] output = nn.evaluate(mnistImages[index]);
 							int prediction = indexOf(output, max(output));
 
 							if(prediction == mnistLabels[index]) {
 								numCorrect++;
 							}
-							avgCost += nn.Cost(output, mnistOutputs[index], "categorical_crossentropy") * weightedAvg;
+							avgCost += nn.cost(output, mnistOutputs[index], "categorical_crossentropy") * weightedAvg;
 							progressBar(30, "calculating", i+1, numCases);
 						}
 						System.out.println();
@@ -627,7 +641,7 @@ class NeuralNetworkCLI{
 						int inputSize = Integer.parseInt(st.nextToken());
 						int outputSize = Integer.parseInt(st.nextToken());
 		
-						if(inputSize != nn.GetTopology()[0] || outputSize != nn.GetTopology()[nn.numLayers-1]) {
+						if(inputSize != nn.getTopology()[0] || outputSize != nn.getTopology()[nn.numLayers-1]) {
 							//sizes dont match
 							Output("input/output sizes dont match the network");
 							continue;
@@ -655,8 +669,8 @@ class NeuralNetworkCLI{
 						double avgCost = 0;
 						final double weightedAvg = 1/(double)numCases;
 						for(int i = 0; i < numCases; i++) {
-							double[] output = nn.Evaluate(inputs[i]);
-							double c = nn.Cost(output, outputs[i], s[2]);
+							double[] output = nn.evaluate(inputs[i]);
+							double c = nn.cost(output, outputs[i], s[2]);
 							if(Double.isNaN(c)) {
 								Output("nan error at input #" + i);
 							}
@@ -700,9 +714,9 @@ class NeuralNetworkCLI{
 					initMnist(Math.min(Integer.parseInt(s[1]), 60000), "data/train-images.idx3-ubyte", "data/train-labels.idx1-ubyte", false);
 				} else if(s[0].equals("magnitude")) {
 					double avgBias = 0, minBias = Double.MAX_VALUE, maxBias = Double.MIN_VALUE;	
-					double[][] biases = nn.GetBiases();
+					double[][] biases = nn.getBiases();
 					int numBiases = 0;
-					int[] topology = nn.GetTopology();
+					int[] topology = nn.getTopology();
 					for(int i = 0; i < biases.length; i++) {
 						for(int j = 0; j < topology[i]; j++) {
 							numBiases++;
@@ -717,7 +731,7 @@ class NeuralNetworkCLI{
 						}
 					}
 					double avgWeight = 0, minWeight = Double.MAX_VALUE, maxWeight = Double.MIN_VALUE;	
-					double[][][] weights = nn.GetWeights();
+					double[][][] weights = nn.getWeights();
 					int numWeights = 0;
 					for(int i = 1; i < weights.length; i++) {
 						for(int j = 0; j < topology[i]; j++) {
@@ -870,7 +884,7 @@ class NeuralNetworkCLI{
 					input[i * inputRaw[0].length + j] = inputRaw[i][j];
 				}
 			}
-			double[] output = nn.Evaluate(input);
+			double[] output = nn.evaluate(input);
 			//find the highest probability
 			int maxIndex = 0;
 			for (int i = 0; i < 10; i++) {
