@@ -1018,7 +1018,7 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
-	private int max(int[] arr) {
+	protected int max(int[] arr) {
 		int m = -1;
 		for (int i : arr) {
 			if (i > m) {
@@ -1028,7 +1028,7 @@ public class NeuralNetwork implements Serializable {
 		return m;
 	}
 
-	private double max(double[] arr) {
+	protected double max(double[] arr) {
 		double m = -1;
 		for (double i : arr) {
 			if (i > m) {
@@ -1038,7 +1038,7 @@ public class NeuralNetwork implements Serializable {
 		return m;
 	}
 
-	private int indexOf(double[] arr, double v) {
+	protected int indexOf(double[] arr, double v) {
 		int index = -1;
 		for (int i = 0; i < arr.length; i++) {
 			if (arr[i] == v) {

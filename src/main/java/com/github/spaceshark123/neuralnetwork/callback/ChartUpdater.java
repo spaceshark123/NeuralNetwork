@@ -12,8 +12,9 @@ import org.jfree.chart.title.TextTitle;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.NumberTickUnit;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JFrame;
+import java.awt.Dimension;
+import java.awt.Color;
 import java.text.DecimalFormat;
 
 public class ChartUpdater implements TrainingCallback {
