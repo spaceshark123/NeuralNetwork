@@ -1,4 +1,4 @@
-package com.github.spaceshark123.neuralnetwork;
+package com.github.spaceshark123.neuralnetwork.callback;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
@@ -16,7 +16,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.text.DecimalFormat;
 
-public class ChartUpdater implements NeuralNetwork.TrainingCallback {
+public class ChartUpdater implements TrainingCallback {
     private XYSeries trainAccuracySeries;
     private XYSeries testAccuracySeries;
     private JFreeChart chart;

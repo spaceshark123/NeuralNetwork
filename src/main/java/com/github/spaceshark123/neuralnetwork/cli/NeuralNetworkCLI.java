@@ -21,9 +21,10 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-import com.github.spaceshark123.neuralnetwork.ChartUpdater;
 import com.github.spaceshark123.neuralnetwork.NeuralNetwork;
 import com.github.spaceshark123.neuralnetwork.RealTimeSoftDrawCanvas;
+import com.github.spaceshark123.neuralnetwork.callback.ChartUpdater;
+import com.github.spaceshark123.neuralnetwork.optimizer.*;
 
 class NeuralNetworkCLI{
 	public static int SIZE = 1000;
@@ -35,7 +36,6 @@ class NeuralNetworkCLI{
   	public static void main(String[] args) {
 		//load?
 		Scanner scan = new Scanner(System.in);
-		String path = "SavedNetwork";
 		NeuralNetwork nn = new NeuralNetwork();
 		Clear();
 
@@ -345,10 +345,10 @@ class NeuralNetworkCLI{
 									continue;
 								}
 								int ind = 7;
-								NeuralNetwork.Optimizer optimizer;
+								Optimizer optimizer;
 								switch (s[6]) {
 									case "sgd":
-										optimizer = new NeuralNetwork.OptimizerType.SGD();
+										optimizer = new SGD();
 										break;
 									case "sgdmomentum":
 										//check if custom arguments are provided
@@ -361,10 +361,10 @@ class NeuralNetworkCLI{
 												momentum = Double.parseDouble(Input(scan));
 											}
 										}
-										optimizer = new NeuralNetwork.OptimizerType.SGDMomentum(momentum);
+										optimizer = new SGDMomentum(momentum);
 										break;
 									case "adagrad":
-										optimizer = new NeuralNetwork.OptimizerType.AdaGrad();
+										optimizer = new AdaGrad();
 										break;
 									case "rmsprop":
 										//check if custom arguments are provided
@@ -377,7 +377,7 @@ class NeuralNetworkCLI{
 												decayRate = Double.parseDouble(Input(scan));
 											}
 										}
-										optimizer = new NeuralNetwork.OptimizerType.RMSProp(decayRate);
+										optimizer = new RMSProp(decayRate);
 										break;
 									case "adam":
 										//check if custom arguments are provided
@@ -393,10 +393,10 @@ class NeuralNetworkCLI{
 												beta2 = Double.parseDouble(Input(scan));
 											}
 										}
-										optimizer = new NeuralNetwork.OptimizerType.Adam(beta1, beta2);
+										optimizer = new Adam(beta1, beta2);
 										break;
 									default:
-										optimizer = new NeuralNetwork.OptimizerType.SGD();
+										optimizer = new SGD();
 										break;
 								}
 
@@ -466,10 +466,10 @@ class NeuralNetworkCLI{
 								continue;
 							}
 							int ind = 7;
-							NeuralNetwork.Optimizer optimizer;
+							Optimizer optimizer;
 							switch (s[6]) {
 								case "sgd":
-									optimizer = new NeuralNetwork.OptimizerType.SGD();
+									optimizer = new SGD();
 									break;
 								case "sgdmomentum":
 									//check if custom arguments are provided
@@ -482,10 +482,10 @@ class NeuralNetworkCLI{
 											momentum = Double.parseDouble(Input(scan));
 										}
 									}
-									optimizer = new NeuralNetwork.OptimizerType.SGDMomentum(momentum);
+									optimizer = new SGDMomentum(momentum);
 									break;
 								case "adagrad":
-									optimizer = new NeuralNetwork.OptimizerType.AdaGrad();
+									optimizer = new AdaGrad();
 									break;
 								case "rmsprop":
 									//check if custom arguments are provided
@@ -498,7 +498,7 @@ class NeuralNetworkCLI{
 											decayRate = Double.parseDouble(Input(scan));
 										}
 									}
-									optimizer = new NeuralNetwork.OptimizerType.RMSProp(decayRate);
+									optimizer = new RMSProp(decayRate);
 									break;
 								case "adam":
 									//check if custom arguments are provided
@@ -514,10 +514,10 @@ class NeuralNetworkCLI{
 											beta2 = Double.parseDouble(Input(scan));
 										}
 									}
-									optimizer = new NeuralNetwork.OptimizerType.Adam(beta1, beta2);
+									optimizer = new Adam(beta1, beta2);
 									break;
 								default:
-									optimizer = new NeuralNetwork.OptimizerType.SGD();
+									optimizer = new SGD();
 									break;
 							}
 
@@ -557,6 +557,7 @@ class NeuralNetworkCLI{
 								progressBar(30, "Parsing training data", i+1, numCases);
 							}
 							System.out.println();
+							br.close();
 							nn.displayAccuracy = false;
 							String lossFunction = s[5];
 							lossFunction = lossFunction.equals("cce") ? "categorical_crossentropy" : lossFunction;
@@ -650,6 +651,7 @@ class NeuralNetworkCLI{
 							progressBar(30, "Parsing test data", i+1, numCases);
 						}
 						System.out.println();
+						br.close();
 						double avgCost = 0;
 						final double weightedAvg = 1/(double)numCases;
 						for(int i = 0; i < numCases; i++) {
