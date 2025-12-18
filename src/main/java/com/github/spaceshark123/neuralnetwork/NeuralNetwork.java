@@ -26,8 +26,11 @@ import com.github.spaceshark123.neuralnetwork.optimizer.Optimizer;
 import com.github.spaceshark123.neuralnetwork.optimizer.SGD;
 import com.github.spaceshark123.neuralnetwork.activation.ActivationFunction;
 import com.github.spaceshark123.neuralnetwork.activation.ReLU;
-import com.github.spaceshark123.neuralnetwork.activation.Softmax;
 
+/**
+ * Represents a feedforward MLP (Multi-Layer Perceptron) neural network with customizable topology,
+ * activation functions, weight initialization, and regularization.
+ */
 public class NeuralNetwork implements Serializable {
 	private static final long serialVersionUID = 1L;
 
@@ -75,9 +78,37 @@ public class NeuralNetwork implements Serializable {
 	volatile protected double[][] avgBiasGradient;
 	volatile protected double[][][] avgWeightGradient;
 
-	// takes in int[] for number of neurons in each layer and string[] for
-	// activations of each layer
+	/**
+	 * Creates a neural network with the specified topology and activation
+	 * functions.
+	 * 
+	 * @param topology array specifying the number of neurons in each layer
+	 * @param active   array of activation functions for each layer
+	 * @throws IllegalArgumentException if topology or activations are invalid
+	 */
 	public NeuralNetwork(int[] topology, ActivationFunction[] active) {
+		if (topology == null) {
+			throw new IllegalArgumentException("Topology cannot be null");
+		}
+		if (active == null) {
+			throw new IllegalArgumentException("Activations cannot be null");
+		}
+		if (topology.length != active.length) {
+			throw new IllegalArgumentException(
+					"Topology and activations must have the same length (got " +
+							topology.length + " and " + active.length + ")");
+		}
+		if (topology.length < 2) {
+			throw new IllegalArgumentException(
+					"Network must have at least 2 layers (input and output), got " + topology.length);
+		}
+		for (int i = 0; i < topology.length; i++) {
+			if (topology[i] <= 0) {
+				throw new IllegalArgumentException(
+						"All layers must have at least 1 neuron. Layer " + i + " has " + topology[i]);
+			}
+		}
+
 		int maxLayerSize = max(topology);
 		neuronsPerLayer = topology.clone();
 		numLayers = topology.length;
@@ -88,31 +119,57 @@ public class NeuralNetwork implements Serializable {
 		activations = active.clone();
 	}
 
+	/**
+	 * Creates a neural network with regularization.
+	 * 
+	 * @param topology               array specifying the number of neurons in each
+	 *                               layer
+	 * @param active                 array of activation functions for each layer
+	 * @param regularizationType     type of regularization to use
+	 * @param regularizationStrength strength of regularization (lambda)
+	 * @throws IllegalArgumentException if parameters are invalid
+	 */
 	public NeuralNetwork(int[] topology, ActivationFunction[] active, RegularizationType regularizationType,
 			double regularizationStrength) {
 		this(topology, active);
+		if (regularizationType == null) {
+			throw new IllegalArgumentException("Regularization type cannot be null");
+		}
+		if (regularizationStrength < 0) {
+			throw new IllegalArgumentException(
+					"Regularization strength must be non-negative, got " + regularizationStrength);
+		}
 		// set regularization
 		this.regularizationType = regularizationType;
 		lambda = regularizationStrength;
 	}
 
 	public NeuralNetwork() {
-
+		// Empty constructor for deserialization
 	}
 
 	public void init() {
 		init(0);
 	}
 
-	// initialize network with random starting values
+	/**
+	 * Initializes network with random weights and biases.
+	 * 
+	 * @param biasSpread the range for bias initialization [-biasSpread, biasSpread]
+	 */
 	public void init(double biasSpread) {
 		clearNeurons();
 		initWeights();
 		initBiases(biasSpread);
 	}
 
-	// initialize network with random starting values using a specified weight
-	// initialization method ('he' or 'xavier')
+	/**
+	 * Initializes network with a specific weight initialization method.
+	 * 
+	 * @param weightInitMethod the weight initialization method
+	 * @param biasSpread       the range for bias initialization
+	 * @throws IllegalArgumentException if weightInitMethod is null
+	 */
 	public void init(WeightInitMethod weightInitMethod, double biasSpread) {
 		clearNeurons();
 		initWeights(weightInitMethod);
@@ -203,7 +260,33 @@ public class NeuralNetwork implements Serializable {
 		return deepCopy(weights);
 	}
 
+	/**
+	 * Sets a specific weight value.
+	 * 
+	 * @param layer    the layer index of the outgoing neuron
+	 * @param outgoing the outgoing neuron index
+	 * @param incoming the incoming neuron index from previous layer
+	 * @param value    the weight value
+	 * @throws IllegalArgumentException if indices are out of bounds
+	 */
 	public void setWeight(int layer, int outgoing, int incoming, double value) {
+		if (layer < 1 || layer >= numLayers) {
+			throw new IllegalArgumentException(
+					"Layer index must be between 1 and " + (numLayers - 1) + ", got " + layer);
+		}
+		if (outgoing < 0 || outgoing >= neuronsPerLayer[layer]) {
+			throw new IllegalArgumentException(
+					"Outgoing neuron index must be between 0 and " + (neuronsPerLayer[layer] - 1) +
+							", got " + outgoing);
+		}
+		if (incoming < 0 || incoming >= neuronsPerLayer[layer - 1]) {
+			throw new IllegalArgumentException(
+					"Incoming neuron index must be between 0 and " + (neuronsPerLayer[layer - 1] - 1) +
+							", got " + incoming);
+		}
+		if (!Double.isFinite(value)) {
+			throw new IllegalArgumentException("Weight value must be finite, got " + value);
+		}
 		weights[layer][outgoing][incoming] = value;
 	}
 
@@ -211,7 +294,27 @@ public class NeuralNetwork implements Serializable {
 		return deepCopy(biases);
 	}
 
+	/**
+	 * Sets a specific bias value.
+	 * 
+	 * @param layer  the layer index
+	 * @param neuron the neuron index
+	 * @param bias   the bias value
+	 * @throws IllegalArgumentException if indices are out of bounds
+	 */
 	public void setBias(int layer, int neuron, double bias) {
+		if (layer < 1 || layer >= numLayers) {
+			throw new IllegalArgumentException(
+					"Layer index must be between 1 and " + (numLayers - 1) + ", got " + layer);
+		}
+		if (neuron < 0 || neuron >= neuronsPerLayer[layer]) {
+			throw new IllegalArgumentException(
+					"Neuron index must be between 0 and " + (neuronsPerLayer[layer] - 1) +
+							", got " + neuron);
+		}
+		if (!Double.isFinite(bias)) {
+			throw new IllegalArgumentException("Bias value must be finite, got " + bias);
+		}
 		biases[layer][neuron] = bias;
 	}
 
@@ -219,7 +322,22 @@ public class NeuralNetwork implements Serializable {
 		return activations.clone();
 	}
 
+	/**
+	 * Sets the activation function for a specific layer.
+	 * 
+	 * @param layer the layer index
+	 * @param act   the activation function
+	 * @throws IllegalArgumentException if layer is out of bounds or activation is
+	 *                                  null
+	 */
 	public void setActivation(int layer, ActivationFunction act) {
+		if (layer < 0 || layer >= numLayers) {
+			throw new IllegalArgumentException(
+					"Layer index must be between 0 and " + (numLayers - 1) + ", got " + layer);
+		}
+		if (act == null) {
+			throw new IllegalArgumentException("Activation function cannot be null");
+		}
 		activations[layer] = act;
 	}
 
@@ -231,11 +349,30 @@ public class NeuralNetwork implements Serializable {
 		return neuronsPerLayer.clone();
 	}
 
+	/**
+	 * Sets the regularization type.
+	 * 
+	 * @param regularizationType the regularization type
+	 * @throws IllegalArgumentException if regularizationType is null
+	 */
 	public void setRegularizationType(RegularizationType regularizationType) {
+		if (regularizationType == null) {
+			throw new IllegalArgumentException("Regularization type cannot be null");
+		}
 		this.regularizationType = regularizationType;
 	}
 
+	/**
+	 * Sets the regularization strength (lambda).
+	 * 
+	 * @param lambda the regularization strength
+	 * @throws IllegalArgumentException if lambda is negative
+	 */
 	public void setRegularizationLambda(double lambda) {
+		if (lambda < 0) {
+			throw new IllegalArgumentException(
+					"Regularization lambda must be non-negative, got " + lambda);
+		}
 		this.lambda = lambda;
 	}
 
@@ -330,7 +467,34 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
+	/**
+	 * Evaluates the network on the given input using provided neuron arrays to
+	 * store
+	 * intermediate neuron values. Useful for batch processing to avoid race
+	 * conditions.
+	 * 
+	 * @param input      the input values
+	 * @param neurons    the neuron array to use. Must match network topology.
+	 * @param neuronsRaw the raw neuron array to use. Must match network topology.
+	 * @return the output values
+	 * @throws IllegalArgumentException if input is invalid
+	 */
 	public double[] evaluate(double[] input, double[][] neurons, double[][] neuronsRaw) {
+		if (input == null) {
+			throw new IllegalArgumentException("Input cannot be null");
+		}
+		if (input.length != neuronsPerLayer[0]) {
+			throw new IllegalArgumentException(
+					"Input size (" + input.length + ") does not match network input layer size (" +
+							neuronsPerLayer[0] + ")");
+		}
+		for (int i = 0; i < input.length; i++) {
+			if (!Double.isFinite(input[i])) {
+				throw new IllegalArgumentException(
+						"Input values must be finite. Value at index " + i + " is " + input[i]);
+			}
+		}
+
 		clearNeurons(neurons, neuronsRaw);
 
 		// Set input neurons
@@ -365,7 +529,29 @@ public class NeuralNetwork implements Serializable {
 		return Arrays.copyOfRange(neurons[numLayers - 1], 0, neuronsPerLayer[numLayers - 1]);
 	}
 
+	/**
+	 * Evaluates the network on the given input.
+	 * 
+	 * @param input the input values
+	 * @return the output values
+	 * @throws IllegalArgumentException if input is invalid
+	 */
 	public double[] evaluate(double[] input) {
+		if (input == null) {
+			throw new IllegalArgumentException("Input cannot be null");
+		}
+		if (input.length != neuronsPerLayer[0]) {
+			throw new IllegalArgumentException(
+					"Input size (" + input.length + ") does not match network input layer size (" +
+							neuronsPerLayer[0] + ")");
+		}
+		for (int i = 0; i < input.length; i++) {
+			if (!Double.isFinite(input[i])) {
+				throw new IllegalArgumentException(
+						"Input values must be finite. Value at index " + i + " is " + input[i]);
+			}
+		}
+
 		clearNeurons();
 
 		// Set input neurons
@@ -463,10 +649,22 @@ public class NeuralNetwork implements Serializable {
 		return print.toString();
 	}
 
-	// save the neural network to a file directly as a java object
-	// not transferable between different programming languages and not human
-	// readable
+	/**
+	 * Saves the neural network to a file as a serialized Java object (non
+	 * human-readable).
+	 * 
+	 * @param network the network to save
+	 * @param path    the file path
+	 * @throws IllegalArgumentException if network or path is null
+	 */
 	public static void save(NeuralNetwork network, String path) {
+		if (network == null) {
+			throw new IllegalArgumentException("Network cannot be null");
+		}
+		if (path == null || path.trim().isEmpty()) {
+			throw new IllegalArgumentException("Path cannot be null or empty");
+		}
+
 		try {
 			FileOutputStream f = new FileOutputStream(path);
 			ObjectOutputStream o = new ObjectOutputStream(f);
@@ -477,17 +675,29 @@ public class NeuralNetwork implements Serializable {
 			o.close();
 			f.close();
 		} catch (FileNotFoundException e) {
-			System.out.println("File not found");
+			System.out.println("File not found: " + path);
+			throw new RuntimeException("Failed to save network", e);
 		} catch (IOException e) {
-			System.out.println("Error initializing stream");
-		} catch (Exception e) {
-			e.printStackTrace();
+			System.out.println("Error saving network: " + e.getMessage());
+			throw new RuntimeException("Failed to save network", e);
 		}
 	}
 
-	// save the neural network to a file as a plain text file
-	// transferable between different programming languages and human readable
+	/**
+	 * Saves the neural network parameters to a human-readable text file.
+	 * 
+	 * @param network the network to save
+	 * @param path    the file path
+	 * @throws IllegalArgumentException if network or path is null
+	 */
 	public static void saveParameters(NeuralNetwork network, String path) {
+		if (network == null) {
+			throw new IllegalArgumentException("Network cannot be null");
+		}
+		if (path == null || path.trim().isEmpty()) {
+			throw new IllegalArgumentException("Path cannot be null or empty");
+		}
+
 		BufferedWriter writer = null;
 		try {
 			FileWriter fWriter = new FileWriter(path);
@@ -523,18 +733,24 @@ public class NeuralNetwork implements Serializable {
 			// write to file
 			writer.write(print.toString());
 			writer.close();
-		} catch (FileNotFoundException e) {
-			System.out.println("File not found");
 		} catch (IOException e) {
-			System.out.println("Error initializing stream");
-		} catch (Exception e) {
-			e.printStackTrace();
+			System.out.println("Error saving parameters: " + e.getMessage());
+			throw new RuntimeException("Failed to save parameters", e);
 		}
 	}
 
-	// load a neural network from a file that was saved directly as a java object
-	// not transferable between different programming languages
+	/**
+	 * Loads a neural network from a serialized Java object file.
+	 * 
+	 * @param path the file path
+	 * @return the loaded network
+	 * @throws IllegalArgumentException if path is null
+	 */
 	public static NeuralNetwork load(String path) {
+		if (path == null || path.trim().isEmpty()) {
+			throw new IllegalArgumentException("Path cannot be null or empty");
+		}
+
 		try {
 			FileInputStream fi = new FileInputStream(path);
 			ObjectInputStream oi = new ObjectInputStream(fi);
@@ -547,18 +763,29 @@ public class NeuralNetwork implements Serializable {
 
 			return loadedNetwork;
 		} catch (FileNotFoundException e) {
-			System.out.println("File not found");
+			System.out.println("File not found: " + path);
+			throw new RuntimeException("Failed to load network", e);
 		} catch (IOException e) {
-			System.out.println("Error initializing stream");
-		} catch (Exception e) {
-			e.printStackTrace();
+			System.out.println("Error loading network: " + e.getMessage());
+			throw new RuntimeException("Failed to load network", e);
+		} catch (ClassNotFoundException e) {
+			System.out.println("Invalid network file format");
+			throw new RuntimeException("Failed to load network", e);
 		}
-		return null;
 	}
 
-	// load a neural network from a file that was saved as a plain text file
-	// transferable between different programming languages
+	/**
+	 * Loads a neural network from a parameter text file.
+	 * 
+	 * @param path the file path
+	 * @return the loaded network
+	 * @throws IllegalArgumentException if path is null
+	 */
 	public static NeuralNetwork loadParameters(String path) {
+		if (path == null || path.trim().isEmpty()) {
+			throw new IllegalArgumentException("Path cannot be null or empty");
+		}
+
 		try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
 			String line;
 			NeuralNetwork network = new NeuralNetwork();
@@ -630,19 +857,33 @@ public class NeuralNetwork implements Serializable {
 			}
 			return network;
 		} catch (FileNotFoundException e) {
-			System.out.println("File not found");
+			System.out.println("File not found: " + path);
+			throw new RuntimeException("Failed to load parameters", e);
 		} catch (IOException e) {
-			System.out.println("Error reading from file");
-		} catch (ArrayIndexOutOfBoundsException e) {
-			System.out.println("File not formatted correctly");
+			System.out.println("Error reading file: " + e.getMessage());
+			throw new RuntimeException("Failed to load parameters", e);
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.out.println("Error parsing file: " + e.getMessage());
+			throw new RuntimeException("Failed to load parameters", e);
 		}
-		return null;
 	}
 
-	// chance is a number between 0 and 1
+	/**
+	 * Randomly mutates weights and biases with specified probability and magnitude.
+	 * 
+	 * @param chance    probability of mutation for each weight/bias (0 to 1)
+	 * @param variation maximum magnitude of mutation
+	 * @throws IllegalArgumentException if parameters are invalid
+	 */
 	public void mutate(double chance, double variation) {
+		if (chance < 0 || chance > 1) {
+			throw new IllegalArgumentException(
+					"Chance must be between 0 and 1, got " + chance);
+		}
+		if (variation < 0) {
+			throw new IllegalArgumentException(
+					"Variation must be non-negative, got " + variation);
+		}
 		// mutate weights
 		for (int i = 0; i < weights.length; i++) {
 			for (int j = 0; j < weights[0].length; j++) {
@@ -672,8 +913,32 @@ public class NeuralNetwork implements Serializable {
 		return clone;
 	}
 
-	// compute loss function with regularization term
+	/**
+	 * Computes the loss between output and expected values, including
+	 * regularization term.
+	 * 
+	 * @param output       the network output
+	 * @param expected     the expected output
+	 * @param lossFunction the loss function to use
+	 * @return the computed loss value
+	 * @throws IllegalArgumentException if parameters are invalid
+	 */
 	public double loss(double[] output, double[] expected, LossFunction lossFunction) {
+		if (output == null) {
+			throw new IllegalArgumentException("Output cannot be null");
+		}
+		if (expected == null) {
+			throw new IllegalArgumentException("Expected output cannot be null");
+		}
+		if (lossFunction == null) {
+			throw new IllegalArgumentException("Loss function cannot be null");
+		}
+		if (output.length != expected.length) {
+			throw new IllegalArgumentException(
+					"Output and expected arrays must have the same length (got " +
+							output.length + " and " + expected.length + ")");
+		}
+
 		double loss = lossFunction.compute(output, expected);
 		// add regularization term
 		loss += regularizationTerm();
@@ -690,7 +955,8 @@ public class NeuralNetwork implements Serializable {
 		if (layer == numLayers - 1) {
 			// last layer (output layer)
 			double[] optimizedGradients = null;
-			if (lossFunction.hasActivationOptimization() && lossFunction.getOptimizedActivation().isInstance(activations[layer])) {
+			if (lossFunction.hasActivationOptimization()
+					&& lossFunction.getOptimizedActivation().isInstance(activations[layer])) {
 				optimizedGradients = lossFunction.optimizedGradient(predicted, expected);
 			}
 			if (optimizedGradients != null) {
@@ -742,9 +1008,30 @@ public class NeuralNetwork implements Serializable {
 		return Math.max(min, Math.min(max, value));
 	}
 
-	// for classification tasks, evaluates accuracy of the network on given dataset.
-	// outputs are expected to be one-hot encoded.
+	/**
+	 * Evaluates classification accuracy on a dataset.
+	 * 
+	 * @param inputs  the input data
+	 * @param outputs the expected outputs (one-hot encoded)
+	 * @return the accuracy as a fraction between 0 and 1
+	 * @throws IllegalArgumentException if parameters are invalid
+	 */
 	public double evaluateAccuracy(double[][] inputs, double[][] outputs) {
+		if (inputs == null) {
+			throw new IllegalArgumentException("Inputs cannot be null");
+		}
+		if (outputs == null) {
+			throw new IllegalArgumentException("Outputs cannot be null");
+		}
+		if (inputs.length != outputs.length) {
+			throw new IllegalArgumentException(
+					"Inputs and outputs must have the same number of samples (got " +
+							inputs.length + " and " + outputs.length + ")");
+		}
+		if (inputs.length == 0) {
+			throw new IllegalArgumentException("Cannot evaluate accuracy on empty dataset");
+		}
+
 		int numCorrect = 0;
 		for (int i = 0; i < inputs.length; i++) {
 			double[] predicted = evaluate(inputs[i]); // Predict the output for each input
@@ -757,9 +1044,91 @@ public class NeuralNetwork implements Serializable {
 		return (double) numCorrect / inputs.length;
 	}
 
+	/**
+	 * Trains the neural network on the provided dataset.
+	 * 
+	 * @param trainX       training input data
+	 * @param trainY       training output data
+	 * @param testX        test input data
+	 * @param testY        test output data
+	 * @param epochs       number of training epochs
+	 * @param learningRate initial learning rate
+	 * @param batchSize    size of mini-batches (-1 for full batch)
+	 * @param lossFunction loss function to use
+	 * @param decay        learning rate decay factor
+	 * @param optimizer    optimization algorithm to use
+	 * @param callback     callback for training progress updates
+	 * @throws IllegalArgumentException if parameters are invalid
+	 */
 	public void train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
 			double learningRate, int batchSize,
 			LossFunction lossFunction, double decay, Optimizer optimizer, TrainingCallback callback) {
+		// Validate inputs
+		if (trainX == null || trainY == null) {
+			throw new IllegalArgumentException("Training data cannot be null");
+		}
+		if (testX == null || testY == null) {
+			throw new IllegalArgumentException("Test data cannot be null");
+		}
+		if (trainX.length != trainY.length) {
+			throw new IllegalArgumentException(
+					"Training inputs and outputs must have same length (got " +
+							trainX.length + " and " + trainY.length + ")");
+		}
+		if (testX.length != testY.length) {
+			throw new IllegalArgumentException(
+					"Test inputs and outputs must have same length (got " +
+							testX.length + " and " + testY.length + ")");
+		}
+		if (trainX.length == 0) {
+			throw new IllegalArgumentException("Training data cannot be empty");
+		}
+		if (epochs <= 0) {
+			throw new IllegalArgumentException("Epochs must be positive, got " + epochs);
+		}
+		if (learningRate <= 0) {
+			throw new IllegalArgumentException("Learning rate must be positive, got " + learningRate);
+		}
+		if (batchSize < -1 || batchSize == 0) {
+			throw new IllegalArgumentException(
+					"Batch size must be positive or -1 for full batch, got " + batchSize);
+		}
+		if (batchSize > trainX.length) {
+			throw new IllegalArgumentException(
+					"Batch size (" + batchSize + ") cannot exceed training data size (" + trainX.length + ")");
+		}
+		if (lossFunction == null) {
+			throw new IllegalArgumentException("Loss function cannot be null");
+		}
+		if (decay < 0) {
+			throw new IllegalArgumentException("Decay must be non-negative, got " + decay);
+		}
+		if (optimizer == null) {
+			throw new IllegalArgumentException("Optimizer cannot be null");
+		}
+
+		// Validate data dimensions
+		for (int i = 0; i < trainX.length; i++) {
+			if (trainX[i] == null || trainX[i].length != neuronsPerLayer[0]) {
+				throw new IllegalArgumentException(
+						"Training input at index " + i + " has incorrect size");
+			}
+			if (trainY[i] == null || trainY[i].length != neuronsPerLayer[numLayers - 1]) {
+				throw new IllegalArgumentException(
+						"Training output at index " + i + " has incorrect size");
+			}
+		}
+		for (int i = 0; i < testX.length; i++) {
+			if (testX[i] == null || testX[i].length != neuronsPerLayer[0]) {
+				throw new IllegalArgumentException(
+						"Test input at index " + i + " has incorrect size");
+			}
+			if (testY[i] == null || testY[i].length != neuronsPerLayer[numLayers - 1]) {
+				throw new IllegalArgumentException(
+						"Test output at index " + i + " has incorrect size");
+			}
+		}
+
 		double lr = learningRate;
 		// list of indices for data points, will be randomized in each epoch
 		if (batchSize == -1) {
@@ -969,7 +1338,8 @@ public class NeuralNetwork implements Serializable {
 				new SGD());
 	}
 
-	// overloaded train method with default optimizer (SGD), no decay, and no callback
+	// overloaded train method with default optimizer (SGD), no decay, and no
+	// callback
 	public void train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
 			double learningRate, int batchSize,
 			LossFunction lossFunction) {

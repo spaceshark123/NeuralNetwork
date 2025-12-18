@@ -17,6 +17,9 @@ import java.awt.Dimension;
 import java.awt.Color;
 import java.text.DecimalFormat;
 
+/**
+ * Training callback that updates a real-time chart of training and test accuracy.
+ */
 public class ChartUpdater implements TrainingCallback {
     private XYSeries trainAccuracySeries;
     private XYSeries testAccuracySeries;

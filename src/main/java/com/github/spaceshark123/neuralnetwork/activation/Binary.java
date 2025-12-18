@@ -1,5 +1,9 @@
 package com.github.spaceshark123.neuralnetwork.activation;
 
+/**
+ * Binary step activation function: f(x) = 1 if x >= 0 else 0
+ * Outputs either 0 or 1.
+ */
 public class Binary implements ActivationFunction {
 	private static final long serialVersionUID = 1L;
 
