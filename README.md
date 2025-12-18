@@ -9,6 +9,7 @@ This project provides a flexible and extensible implementation of a multithreade
 - [Key Features](#key-features)
 - [Internal Usage](#internal-usage)
 - [Program Usage](#program-usage)
+- [Testing](#testing)
 - [Examples](#examples)
 
 ## Overview
@@ -401,6 +402,16 @@ All training and test dataset files must be formatted in the following way:
 #### Exiting the Program
 
 - To exit the program, simply type exit, and the program will terminate.
+
+## Testing
+
+Unit tests have been provided in the `src/test/java/com/github/spaceshark123/neuralnetwork/` directory using the JUnit testing framework. To run the tests, use the following command:
+
+```shell
+mvn test
+```
+
+These tests will automatically run on each build to verify the correctness of the code.
 
 ## Examples
 
