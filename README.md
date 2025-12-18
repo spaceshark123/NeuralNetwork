@@ -2,7 +2,7 @@
 # Neural Network in Java
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Maven Central](https://img.shields.io/maven-central/v/org.apache.maven.plugins/maven-release-plugin.svg?label=Maven%20Central)](https://search.maven.org/artifact/io.github.spaceshark123/neuralnetwork)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.spaceshark123/neuralnetwork?label=Maven%20Central)](https://search.maven.org/artifact/io.github.spaceshark123/neuralnetwork)
 
 This project provides a flexible and extensible implementation of a multithreaded feedforward neural network in Java with popular optimizers included, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use, import and customize, making it a valuable tool for various machine learning and deep learning tasks. This library was made without any external machine learning, math, or other libraries to aid in its creation (pure Java, at least for the base class). 
 
