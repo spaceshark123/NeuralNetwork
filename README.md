@@ -31,7 +31,7 @@ Neural networks are a fundamental building block of modern machine learning and 
   
 - **Multiple Activation Functions**: Supports popular activation functions including linear, sigmoid, tanh, relu, leaky relu, binary, and softmax.
 
-- **Multiple Loss Functions**:  Supports major loss/error functions: Mean Squared Error, Sum Squared Error, and Categorical Cross-Entropy.
+- **Multiple Loss Functions**:  Supports major loss/error functions: MSE, MAE, Sum Squared Error, Categorical Cross-Entropy, and Binary Cross-Entropy, with easy extensibility to add custom loss functions by implementing the `LossFunction` interface from the `com.github.spaceshark123.neuralnetwork` package.
 
 - **Multiple Optimizers**: Includes popular optimizers like Stochastic gradient descent (SGD), SGD with momentum, AdaGrad, RMSProp, and Adam. Supports additional, custom optimizers using the `Optimizer` interface from the `com.github.spaceshark123.neuralnetwork.optimizer` package.
 
@@ -57,6 +57,7 @@ The following packages are available for use:
 - `com.github.spaceshark123.neuralnetwork.cli`: Contains the console interface for user interaction with the neural network. Intended for direct program running rather than import.
 - `com.github.spaceshark123.neuralnetwork.optimizer`: Contains optimizer implementations and the `Optimizer` interface for creating custom optimizers.
 - `com.github.spaceshark123.neuralnetwork.activation`: Contains the `ActivationFunction` interface and various activation function implementations (Linear, Sigmoid, Tanh, ReLU, LeakyReLU, Binary, Softmax) for use in the neural network.
+- `com.github.spaceshark123.neuralnetwork.loss`: Contains the `LossFunction` interface and various loss function implementations (MSE, MAE, Sum Squared Error, Categorical Cross-Entropy, Binary Cross-Entropy) for use in training and evaluation.
 - `com.github.spaceshark123.neuralnetwork.callback`: Contains the `TrainingCallback` interface for creating custom training callbacks and the `ChartUpdater` class for visualizing accuracy data in realtime during training.
 - `com.github.spaceshark123.neuralnetwork.util`: Contains utility classes like `RealTimeSoftDrawCanvas` for the MNIST drawing tool.
 - `com.github.spaceshark123.neuralnetwork.experimental`: Contains experimental and not fully implemented classes like `ConvolutionalNeuralNetwork`. DO NOT USE THESE CLASSES.
@@ -87,19 +88,19 @@ For use in your own Java projects, simply import the relevant packages/classes a
    int epochs = 100;
    double learningRate = 0.01;
    int batchSize = 32;
-   String lossFunction = "mse"; // or "sse" or "categorical_crossentropy"
+   LossFunction lossFunction = new MSE(); // specify loss function for training (com.github.spaceshark123.neuralnetwork.loss)
    double decay = 0.1; // Learning rate decay
    double momentum = 0.9;
    network.clipThreshold = 1; //default gradient clipping threshold
    //set regularization of network
    network.setRegularizationType(NeuralNetwork.RegularizationType.L2); 
    network.setRegularizationLambda(0.001);
-   Optimizer optimizer = new Adam(0.9, 0.999); //specify optimizer for training
+   Optimizer optimizer = new Adam(0.9, 0.999); //specify optimizer for training (com.github.spaceshark123.neuralnetwork.optimizer)
    //train the network with no callback
    network.train(trainInputs, trainOutputs, testInputs, testOutputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
    ```
 
-optimizers implement the `Optimizer` interface and included optimizers are found in the `com.github.spaceshark123.neuralnetwork.optimizer` package. Included optimizers are:
+Optimizers implement the `Optimizer` interface and included optimizers are found in the `com.github.spaceshark123.neuralnetwork.optimizer` package. Included optimizers are:
 
 - `SGD()`
 - `SGDMomentum(double momentum)`
@@ -110,36 +111,71 @@ optimizers implement the `Optimizer` interface and included optimizers are found
 Custom optimizers can be made by creating a class implementing the `Optimizer` interface from the `com.github.spaceshark123.neuralnetwork.optimizer` package. This can be used to create other optimizers not already included in the NeuralNetwork class.
 
  ```java
- public static class CustomOptimizer implements Optimizer {
-  //assign to the elements of biases and weights in the step function
+public static class CustomOptimizer implements Optimizer {
+  //assign to the elements of biases and weights in the  step function
   private double[][] biases;
   private double[][][] weights;
   private int[] neuronsPerLayer;
-
+  
   @Override
-  public void initialize(int[] neuronsPerLayer, double[][] biases, double[][][] weights) {
-   this.biases = biases;
-   this.weights = weights;
-   this.neuronsPerLayer = neuronsPerLayer;
-   //other initializations
-   ...
+  public void initialize(int[] neuronsPerLayer, double[] [] biases, double[][][] weights) {
+    this.biases = biases;
+    this.weights = weights;
+    this.neuronsPerLayer = neuronsPerLayer;
+    //other initializations
+    ...
   }
-
+  
   @Override
-  public void step(double[][] avgBiasGradient, double[][][] avgWeightGradient, double learningRate) {
-   for (int i = 1; i < neuronsPerLayer.length; i++) {
-    for (int j = 0; j < neuronsPerLayer[i]; j++) {
-     //set biases
-     biases[i][j] = ...
-     for (int k = 0; k < neuronsPerLayer[i - 1]; k++) {
-      //set weights
-      weights[i][j][k] = ...
-     }
+  public void step(double[][] avgBiasGradient, double[][] [] avgWeightGradient, double learningRate) {
+    for (int i = 1; i < neuronsPerLayer.length; i++) {
+      for (int j = 0; j < neuronsPerLayer[i]; j++) {
+        //set biases
+        biases[i][j] = ...
+        for (int k = 0; k < neuronsPerLayer[i - 1];  k++) {
+          //set weights
+          weights[i][j][k] = ...
+        }
+      }
     }
-   }
   }
- }
+}
  ```
+
+Loss functions used during training implement the `LossFunction` interface and are found in the `com.github.spaceshark123.neuralnetwork.loss` package. Included loss functions are:
+
+- `MeanSquaredError()`
+- `MeanAbsoluteError()`
+- `SumSquaredError()`
+- `CategoricalCrossEntropy()`
+- `BinaryCrossEntropy()`
+
+Custom loss functions can be created by implementing the `LossFunction` interface from the `com.github.spaceshark123.neuralnetwork.loss` package. This can be used to create other loss functions not already included in the NeuralNetwork class.
+
+```java
+public class CustomLoss implements LossFunction {
+  @Override
+  public double computeLoss(double[] predicted, double[] actual) {
+    double loss = 0.0;
+    //custom loss code
+    ...
+    return loss;
+  }
+  
+  @Override
+  public double[] computeGradient(double[] predicted, double[] actual) {
+    double[] gradient = new double[predicted.length];
+    //custom gradient code
+    ...
+    return gradient;
+  }
+
+  @Override
+  public String getName() {
+    return "CUSTOM"; // display name of loss function
+  }
+}
+```
 
 Activation functions implement the `ActivationFunction` interface and are found in the `com.github.spaceshark123.neuralnetwork.activation` package. Included activation functions are:
 
@@ -154,63 +190,63 @@ Activation functions implement the `ActivationFunction` interface and are found 
 Custom activation functions can be created by implementing the `ActivationFunction` interface and registering them as a valid activation function with the `ActivationFunctionFactory` using its `register` method. The following example shows how to create a custom activation function with one parameter `param1` and register it with the factory.
 
 ```java
- public class CustomActivation implements ActivationFunction {
-private final double param1;
-
- public CustomActivation(double param1) {
-   this.param1 = param1;
- }
-
+public class CustomActivation implements ActivationFunction {
+  private final double param1;
+  
+  public CustomActivation(double param1) {
+    this.param1 = param1;
+  }
+  
   @Override
   public double activate(double x) {
-   //custom activation code
-   ...
+    //custom activation code
+    ...
   }
-
+  
   @Override
   public double derivative(double x) {
-   //custom derivative code
-   ...
+    //custom derivative code
+    ...
   }
-
+  
   @Override
   public String getName() {
-   return "CUSTOM"; // display name of activation function
- }
-
- @Override
- public String toConfigString() {
-  return "CUSTOM(param1=" + param1 + ")"; // string used in config/saved files to uniquely identify this activation function
- }
+    return "CUSTOM"; // display name of activation function
+  }
+  
+  @Override
+  public String toConfigString() {
+    return "CUSTOM(param1=" + param1 + ")"; // string used in config/saved files to uniquely identify this activation function
+  }
 }
 
- //register the custom activation function with the factory
- ActivationFunctionFactory.register("CUSTOM", params -> {
-    double param1 = params.containsKey("param1")
-        ? Double.parseDouble(params.get("param1")) 
-        : 1.0;
-    return new CustomActivation(param1);
+//register the custom activation function with the factory
+ActivationFunctionFactory.register("CUSTOM", params -> {
+  double param1 = params.containsKey("param1")
+    ? Double.parseDouble(params.get("param1")) 
+    : 1.0;
+  return new CustomActivation(param1);
 });
 ```
 
 Optionally, provide a custom training callback by passing in a class implementing the `TrainingCallback` interface from the `com.github.spaceshark123.neuralnetwork.callback` package as an argument. This can be used to make your own custom train addons like a graph visualization of the data. The `ChartUpdater` class has been provided in the same package to visualize accuracy data using this callback interface.
 
  ```java
- public class Callback implements TrainingCallback {
+public class Callback implements TrainingCallback {
   //testAccuracy is -1 if the current mini-batch doesn't have a test accuracy
   @Override
   public void onEpochUpdate(int epoch, int batch, double progress, double trainAccuracy, double testAccuracy) {
-   System.out.println("this statement is run for every mini-batch in training");
+    System.out.println("this statement is run for every mini-batch in training");
   }
- }
+}
 
- class Main {
+class Main {
   public static void main(String[] args) {
-   ...
-   Callback callback = new Callback();
-   network.train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, callback);
+    ...
+    Callback callback = new Callback();
+    network.train(inputs, outputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, callback);
   }
- }
+}
  ```
 
 3. **Mutation**: Mutate the neural network for a genetic algorithm (evolution).
