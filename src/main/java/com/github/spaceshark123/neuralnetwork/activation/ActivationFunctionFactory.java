@@ -86,9 +86,18 @@ public class ActivationFunctionFactory {
      * @param name the name (case-insensitive)
      * @param creator the creator function
      */
-    public static void register(String name, ActivationCreator creator) {
-        REGISTRY.put(name.toLowerCase(), creator);
-    }
+	public static void register(String name, ActivationCreator creator) {
+		REGISTRY.put(name.toLowerCase(), creator);
+	}
+	
+	/**
+	 * Unregisters a custom activation function by name.
+	 * 
+	 * @param name the name of the activation function to remove
+	 */
+	public static void unregister(String name) {
+		REGISTRY.remove(name.toLowerCase());
+	}
     
     /**
      * Parses parameter string into a map.
