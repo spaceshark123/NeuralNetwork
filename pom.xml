@@ -5,7 +5,34 @@
 
   <groupId>io.github.spaceshark123</groupId>
   <artifactId>neuralnetwork</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <name>${project.groupId}:${project.artifactId}</name>
+  <description>A flexible, multithreaded neural network library in Java</description>
+  <url>https://github.com/spaceshark123/NeuralNetwork</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>http://www.opensource.org/licenses/mit-license.php</url>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>Amogh Patnaik</name>
+      <email>patnaikamogh@gmail.com</email>
+      <organization>Spaceshark123</organization>
+      <organizationUrl>https://github.com/spaceshark123/</organizationUrl>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:git://github.com/spaceshark123/NeuralNetwork.git</connection>
+    <developerConnection>scm:git:ssh://github.com:spaceshark123/NeuralNetwork.git</developerConnection>
+    <url>http://github.com/spaceshark123/NeuralNetwork/tree/main</url>
+  </scm>
 
   <properties>
     <maven.compiler.release>11</maven.compiler.release> <!-- Set Java version to 11 for compatibility
@@ -29,9 +56,53 @@
 
   <build>
     <plugins>
+      <!-- Surefire for running unit tests -->
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
+      </plugin>
+      <!-- Generate Javadoc JAR -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.12.0</version>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Generate Sources JAR -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.4.0</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Generate pom, .asc files using GPG signing -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>3.2.8</version>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
