@@ -21,6 +21,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.spaceshark123.neuralnetwork.callback.TrainingCallback;
+import com.github.spaceshark123.neuralnetwork.loss.LossFunction;
 import com.github.spaceshark123.neuralnetwork.optimizer.Optimizer;
 import com.github.spaceshark123.neuralnetwork.optimizer.SGD;
 import com.github.spaceshark123.neuralnetwork.activation.ActivationFunction;
@@ -162,7 +163,8 @@ public class NeuralNetwork implements Serializable {
 		}
 	}
 
-	// default weight initialization (automatically chooses he or xavier based on activation)
+	// default weight initialization (automatically chooses he or xavier based on
+	// activation)
 	protected void initWeights() {
 		for (int i = 1; i < numLayers; i++) {
 			int n = neuronsPerLayer[i - 1];
@@ -670,70 +672,44 @@ public class NeuralNetwork implements Serializable {
 		return clone;
 	}
 
-	// loss functions
-	public double loss(double[] output, double[] expected, String lossFunction) {
-		double loss = 0;
-		if (output.length != expected.length) {
-			return -1;
-		}
-		if (lossFunction.equals("sse")) {
-			for (int i = 0; i < output.length; i++) {
-				double neuronLoss = 0.5 * Math.pow(expected[i] - output[i], 2);
-				loss += neuronLoss;
-			}
-		} else if (lossFunction.equals("mse")) {
-			for (int i = 0; i < output.length; i++) {
-				double neuronLoss = Math.pow(expected[i] - output[i], 2);
-				loss += neuronLoss;
-			}
-			loss /= output.length;
-		} else if (lossFunction.equals("categorical_crossentropy")) {
-			for (int i = 0; i < output.length; i++) {
-				loss -= expected[i] * Math.log(output[i] + 1.0e-15d);
-			}
-		}
+	// compute loss function with regularization term
+	public double loss(double[] output, double[] expected, LossFunction lossFunction) {
+		double loss = lossFunction.compute(output, expected);
 		// add regularization term
 		loss += regularizationTerm();
 		return loss;
 	}
 
-	// error functions derivative
-	protected double loss_der(double predicted, double expected, String lossFunction) {
-		if (lossFunction.equals("sse")) {
-			return predicted - expected;
-		} else if (lossFunction.equals("mse")) {
-			return (2.0 * (predicted - expected)) / neuronsPerLayer[numLayers - 1];
-		} else if (lossFunction.equals("categorical_crossentropy")) {
-			return -expected / (predicted + 1.0e-15);
-		}
-		return 1;
-	}
-
-	private double[] backpropagate(double[][] biasGrad, double[][][] weightGrad, double[] predicted, double[] expected,
-			String lossFunction) {
-		return backpropagate(this.neurons, this.neuronsRaw, biasGrad, weightGrad, predicted, expected, 1, lossFunction);
-	}
-
+	// backpropagation algorithm to compute gradients
 	private double[] backpropagate(double[][] neurons, double[][] neuronsRaw, double[][] biasGrad,
 			double[][][] weightGrad,
-			double[] predicted, double[] expected, int layer, String lossFunction) {
+			double[] predicted, double[] expected, int layer, LossFunction lossFunction) {
 		double[] neuronGradients = new double[neuronsPerLayer[layer]];
 
 		// base case
 		if (layer == numLayers - 1) {
 			// last layer (output layer)
-			for (int i = 0; i < neuronsPerLayer[layer]; i++) {
-				if (lossFunction.equals("categorical_crossentropy")
-						&& activations[layer] instanceof Softmax) {
-					// Softmax with categorical crossentropy simplification to speed up computation
-					neuronGradients[i] = predicted[i] - expected[i];
-				} else {
-					neuronGradients[i] = loss_der(predicted[i], expected[i], lossFunction)
-							* activate_der(neuronsRaw[layer][i], layer, neuronsRaw[layer], i);
+			double[] optimizedGradients = null;
+			if (lossFunction.hasActivationOptimization() && lossFunction.getOptimizedActivation().isInstance(activations[layer])) {
+				optimizedGradients = lossFunction.optimizedGradient(predicted, expected);
+			}
+			if (optimizedGradients != null) {
+				// use optimized gradient calculation
+				for (int i = 0; i < neuronsPerLayer[layer]; i++) {
+					neuronGradients[i] = optimizedGradients[i];
+					biasGrad[layer][i] = neuronGradients[i];
+					for (int j = 0; j < neuronsPerLayer[layer - 1]; j++) {
+						weightGrad[layer][i][j] = neuronGradients[i] * neurons[layer - 1][j];
+					}
 				}
-				biasGrad[layer][i] = 1 * neuronGradients[i];
-				for (int j = 0; j < neuronsPerLayer[layer - 1]; j++) {
-					weightGrad[layer][i][j] = neuronGradients[i] * neurons[layer - 1][j];
+			} else {
+				for (int i = 0; i < neuronsPerLayer[layer]; i++) {
+					neuronGradients[i] = lossFunction.gradient(predicted, expected)[i]
+							* activate_der(neuronsRaw[layer][i], layer, neuronsRaw[layer], i);
+					biasGrad[layer][i] = neuronGradients[i];
+					for (int j = 0; j < neuronsPerLayer[layer - 1]; j++) {
+						weightGrad[layer][i][j] = neuronGradients[i] * neurons[layer - 1][j];
+					}
 				}
 			}
 			return neuronGradients;
@@ -783,7 +759,7 @@ public class NeuralNetwork implements Serializable {
 
 	public void train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
 			double learningRate, int batchSize,
-			String lossFunction, double decay, Optimizer optimizer, TrainingCallback callback) {
+			LossFunction lossFunction, double decay, Optimizer optimizer, TrainingCallback callback) {
 		double lr = learningRate;
 		// list of indices for data points, will be randomized in each epoch
 		if (batchSize == -1) {
@@ -978,28 +954,32 @@ public class NeuralNetwork implements Serializable {
 		System.out.println("average batch time: " + avgBatchTime + " seconds");
 	}
 
+	// overloaded train method with no callback
 	public void train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
 			double learningRate, int batchSize,
-			String lossFunction, double decay, Optimizer optimizer) {
+			LossFunction lossFunction, double decay, Optimizer optimizer) {
 		train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
 	}
 
+	// overloaded train method with default optimizer (SGD) and no callback
 	public void train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
 			double learningRate, int batchSize,
-			String lossFunction, double decay) {
+			LossFunction lossFunction, double decay) {
 		train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, decay,
 				new SGD());
 	}
 
+	// overloaded train method with default optimizer (SGD), no decay, and no callback
 	public void train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
 			double learningRate, int batchSize,
-			String lossFunction) {
+			LossFunction lossFunction) {
 		train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, 0);
 	}
 
+	// overloaded train method with no decay, and no callback
 	public void train(double[][] trainX, double[][] trainY, double[][] testX, double[][] testY, int epochs,
 			double learningRate, int batchSize,
-			String lossFunction, Optimizer optimizer) {
+			LossFunction lossFunction, Optimizer optimizer) {
 		train(trainX, trainY, testX, testY, epochs, learningRate, batchSize, lossFunction, 0, optimizer);
 	}
 
