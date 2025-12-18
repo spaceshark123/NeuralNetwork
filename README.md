@@ -1,20 +1,28 @@
 
 # Neural Network in Java
 
-This project provides a flexible and extensible implementation of a multithreaded feedforward neural network in Java with popular optimizers included, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use, import and customize, making it a valuable tool for various machine learning and deep learning tasks. This was made without any external machine learning, math, or other libraries to aid in its creation (pure Java, at least for the base class). Maven is used for dependency management, along with a Maven wrapper for ease of use.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Maven Central](https://img.shields.io/maven-central/v/org.apache.maven.plugins/maven-release-plugin.svg?label=Maven%20Central)](https://search.maven.org/artifact/io.github.spaceshark123/neuralnetwork)
+
+This project provides a flexible and extensible implementation of a multithreaded feedforward neural network in Java with popular optimizers included, wrapped up in a console user interface with a realtime accuracy graph visualizer while training. The neural network is designed to be easy to use, import and customize, making it a valuable tool for various machine learning and deep learning tasks. This library was made without any external machine learning, math, or other libraries to aid in its creation (pure Java, at least for the base class). 
+
+Releases are hosted on Maven Central. To add a dependency to this library, use:
+
+```xml
+<dependency>
+    <groupId>io.github.spaceshark123</groupId>
+    <artifactId>neuralnetwork</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
 
 ## Table of Contents
 
-- [Overview](#overview)
 - [Key Features](#key-features)
 - [Internal Usage](#internal-usage)
 - [Program Usage](#program-usage)
 - [Testing](#testing)
 - [Examples](#examples)
-
-## Overview
-
-Neural networks are a fundamental building block of modern machine learning and artificial intelligence. This Java-based implementation allows you to create, train, evaluate, and use neural networks for a wide range of applications using a highly user-friendly console/GUI interface or directly using the `NeuralNetwork` class in the `io.github.spaceshark123.neuralnetwork` package for your own needs if necessary.
 
 ## Key Features
 
