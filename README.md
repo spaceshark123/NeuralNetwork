@@ -14,7 +14,7 @@ This project provides a flexible and extensible implementation of a multithreade
 
 ## Overview
 
-Neural networks are a fundamental building block of modern machine learning and artificial intelligence. This Java-based implementation allows you to create, train, evaluate, and use neural networks for a wide range of applications using a highly user-friendly console/GUI interface or directly using the `NeuralNetwork` class in the `com.github.spaceshark123.neuralnetwork` package for your own needs if necessary.
+Neural networks are a fundamental building block of modern machine learning and artificial intelligence. This Java-based implementation allows you to create, train, evaluate, and use neural networks for a wide range of applications using a highly user-friendly console/GUI interface or directly using the `NeuralNetwork` class in the `io.github.spaceshark123.neuralnetwork` package for your own needs if necessary.
 
 ## Key Features
 
@@ -32,9 +32,9 @@ Neural networks are a fundamental building block of modern machine learning and 
   
 - **Multiple Activation Functions**: Supports popular activation functions including linear, sigmoid, tanh, relu, leaky relu, binary, and softmax.
 
-- **Multiple Loss Functions**:  Supports major loss/error functions: MSE, MAE, Sum Squared Error, Categorical Cross-Entropy, and Binary Cross-Entropy, with easy extensibility to add custom loss functions by implementing the `LossFunction` interface from the `com.github.spaceshark123.neuralnetwork` package.
+- **Multiple Loss Functions**:  Supports major loss/error functions: MSE, MAE, Sum Squared Error, Categorical Cross-Entropy, and Binary Cross-Entropy, with easy extensibility to add custom loss functions by implementing the `LossFunction` interface from the `io.github.spaceshark123.neuralnetwork` package.
 
-- **Multiple Optimizers**: Includes popular optimizers like Stochastic gradient descent (SGD), SGD with momentum, AdaGrad, RMSProp, and Adam. Supports additional, custom optimizers using the `Optimizer` interface from the `com.github.spaceshark123.neuralnetwork.optimizer` package.
+- **Multiple Optimizers**: Includes popular optimizers like Stochastic gradient descent (SGD), SGD with momentum, AdaGrad, RMSProp, and Adam. Supports additional, custom optimizers using the `Optimizer` interface from the `io.github.spaceshark123.neuralnetwork.optimizer` package.
 
 - **Weight Initialization**: Utilizes weight initialization techniques like Xavier (for linear, sigmoid, and tanh) and He (for relu) for better convergence.
 
@@ -54,18 +54,18 @@ Neural networks are a fundamental building block of modern machine learning and 
 
 The following packages are available for use:
 
-- `com.github.spaceshark123.neuralnetwork`: Contains the main `NeuralNetwork` class and related interfaces for optimizers and training callbacks.
-- `com.github.spaceshark123.neuralnetwork.cli`: Contains the console interface for user interaction with the neural network. Intended for direct program running rather than import.
-- `com.github.spaceshark123.neuralnetwork.optimizer`: Contains optimizer implementations and the `Optimizer` interface for creating custom optimizers.
-- `com.github.spaceshark123.neuralnetwork.activation`: Contains the `ActivationFunction` interface and various activation function implementations (Linear, Sigmoid, Tanh, ReLU, LeakyReLU, Binary, Softmax) for use in the neural network.
-- `com.github.spaceshark123.neuralnetwork.loss`: Contains the `LossFunction` interface and various loss function implementations (MSE, MAE, Sum Squared Error, Categorical Cross-Entropy, Binary Cross-Entropy) for use in training and evaluation.
-- `com.github.spaceshark123.neuralnetwork.callback`: Contains the `TrainingCallback` interface for creating custom training callbacks and the `ChartUpdater` class for visualizing accuracy data in realtime during training.
-- `com.github.spaceshark123.neuralnetwork.util`: Contains utility classes like `RealTimeSoftDrawCanvas` for the MNIST drawing tool.
-- `com.github.spaceshark123.neuralnetwork.experimental`: Contains experimental and not fully implemented classes like `ConvolutionalNeuralNetwork`. DO NOT USE THESE CLASSES.
+- `io.github.spaceshark123.neuralnetwork`: Contains the main `NeuralNetwork` class and related interfaces for optimizers and training callbacks.
+- `io.github.spaceshark123.neuralnetwork.cli`: Contains the console interface for user interaction with the neural network. Intended for direct program running rather than import.
+- `io.github.spaceshark123.neuralnetwork.optimizer`: Contains optimizer implementations and the `Optimizer` interface for creating custom optimizers.
+- `io.github.spaceshark123.neuralnetwork.activation`: Contains the `ActivationFunction` interface and various activation function implementations (Linear, Sigmoid, Tanh, ReLU, LeakyReLU, Binary, Softmax) for use in the neural network.
+- `io.github.spaceshark123.neuralnetwork.loss`: Contains the `LossFunction` interface and various loss function implementations (MSE, MAE, Sum Squared Error, Categorical Cross-Entropy, Binary Cross-Entropy) for use in training and evaluation.
+- `io.github.spaceshark123.neuralnetwork.callback`: Contains the `TrainingCallback` interface for creating custom training callbacks and the `ChartUpdater` class for visualizing accuracy data in realtime during training.
+- `io.github.spaceshark123.neuralnetwork.util`: Contains utility classes like `RealTimeSoftDrawCanvas` for the MNIST drawing tool.
+- `io.github.spaceshark123.neuralnetwork.experimental`: Contains experimental and not fully implemented classes like `ConvolutionalNeuralNetwork`. DO NOT USE THESE CLASSES.
 
 For use in your own Java projects, simply import the relevant packages/classes and it will immediately be usable. The following section covers the proper syntax for:
 
-1. **Initialize the Neural Network**: Create a neural network by specifying the topology (number of neurons in each layer) and activation functions (from the `com.github.spaceshark123.neuralnetwork.activation` package).
+1. **Initialize the Neural Network**: Create a neural network by specifying the topology (number of neurons in each layer) and activation functions (from the `io.github.spaceshark123.neuralnetwork.activation` package).
 
    ```java
    int[] topology = {inputSize, hiddenLayerSize, outputSize};
@@ -89,19 +89,19 @@ For use in your own Java projects, simply import the relevant packages/classes a
    int epochs = 100;
    double learningRate = 0.01;
    int batchSize = 32;
-   LossFunction lossFunction = new MSE(); // specify loss function for training (com.github.spaceshark123.neuralnetwork.loss)
+   LossFunction lossFunction = new MSE(); // specify loss function for training (io.github.spaceshark123.neuralnetwork.loss)
    double decay = 0.1; // Learning rate decay
    double momentum = 0.9;
    network.clipThreshold = 1; //default gradient clipping threshold
    //set regularization of network
    network.setRegularizationType(NeuralNetwork.RegularizationType.L2); 
    network.setRegularizationLambda(0.001);
-   Optimizer optimizer = new Adam(0.9, 0.999); //specify optimizer for training (com.github.spaceshark123.neuralnetwork.optimizer)
+   Optimizer optimizer = new Adam(0.9, 0.999); //specify optimizer for training (io.github.spaceshark123.neuralnetwork.optimizer)
    //train the network with no callback
    network.train(trainInputs, trainOutputs, testInputs, testOutputs, epochs, learningRate, batchSize, lossFunction, decay, optimizer, null);
    ```
 
-Optimizers implement the `Optimizer` interface and included optimizers are found in the `com.github.spaceshark123.neuralnetwork.optimizer` package. Included optimizers are:
+Optimizers implement the `Optimizer` interface and included optimizers are found in the `io.github.spaceshark123.neuralnetwork.optimizer` package. Included optimizers are:
 
 - `SGD()`
 - `SGDMomentum(double momentum)`
@@ -109,7 +109,7 @@ Optimizers implement the `Optimizer` interface and included optimizers are found
 - `RMSProp(double decayRate)`
 - `Adam(double beta1, double beta2)`
 
-Custom optimizers can be made by creating a class implementing the `Optimizer` interface from the `com.github.spaceshark123.neuralnetwork.optimizer` package. This can be used to create other optimizers not already included in the NeuralNetwork class.
+Custom optimizers can be made by creating a class implementing the `Optimizer` interface from the `io.github.spaceshark123.neuralnetwork.optimizer` package. This can be used to create other optimizers not already included in the NeuralNetwork class.
 
  ```java
 public static class CustomOptimizer implements Optimizer {
@@ -143,7 +143,7 @@ public static class CustomOptimizer implements Optimizer {
 }
  ```
 
-Loss functions used during training implement the `LossFunction` interface and are found in the `com.github.spaceshark123.neuralnetwork.loss` package. Included loss functions are:
+Loss functions used during training implement the `LossFunction` interface and are found in the `io.github.spaceshark123.neuralnetwork.loss` package. Included loss functions are:
 
 - `MeanSquaredError()`
 - `MeanAbsoluteError()`
@@ -151,7 +151,7 @@ Loss functions used during training implement the `LossFunction` interface and a
 - `CategoricalCrossEntropy()`
 - `BinaryCrossEntropy()`
 
-Custom loss functions can be created by implementing the `LossFunction` interface from the `com.github.spaceshark123.neuralnetwork.loss` package. This can be used to create other loss functions not already included in the NeuralNetwork class.
+Custom loss functions can be created by implementing the `LossFunction` interface from the `io.github.spaceshark123.neuralnetwork.loss` package. This can be used to create other loss functions not already included in the NeuralNetwork class.
 
 ```java
 public class CustomLoss implements LossFunction {
@@ -178,7 +178,7 @@ public class CustomLoss implements LossFunction {
 }
 ```
 
-Activation functions implement the `ActivationFunction` interface and are found in the `com.github.spaceshark123.neuralnetwork.activation` package. Included activation functions are:
+Activation functions implement the `ActivationFunction` interface and are found in the `io.github.spaceshark123.neuralnetwork.activation` package. Included activation functions are:
 
 - `Linear()`
 - `Sigmoid()`
@@ -230,7 +230,7 @@ ActivationFunctionFactory.register("CUSTOM", params -> {
 });
 ```
 
-Optionally, provide a custom training callback by passing in a class implementing the `TrainingCallback` interface from the `com.github.spaceshark123.neuralnetwork.callback` package as an argument. This can be used to make your own custom train addons like a graph visualization of the data. The `ChartUpdater` class has been provided in the same package to visualize accuracy data using this callback interface.
+Optionally, provide a custom training callback by passing in a class implementing the `TrainingCallback` interface from the `io.github.spaceshark123.neuralnetwork.callback` package as an argument. This can be used to make your own custom train addons like a graph visualization of the data. The `ChartUpdater` class has been provided in the same package to visualize accuracy data using this callback interface.
 
  ```java
 public class Callback implements TrainingCallback {
@@ -322,22 +322,22 @@ To use this neural network implementation, you can interact with a custom consol
    **Compile**:
 
    ```shell
-   mvn package
+   mvn package -Pcli # builds the project with the cli profile (allows for runnable JAR)
    ```
 
    **Run**:
 
    ```shell
    # Run the produced JAR (replace <version> with the actual version in target/)
-   java -jar target/NeuralNetwork-<version>.jar
+   java -jar target/neuralnetwork-cli-<version>.jar
 
    # Or use a glob to avoid typing the version (works if only one matching JAR exists)
-   java -jar target/NeuralNetwork-*.jar
+   java -jar target/neuralnetwork-cli-*.jar
    ```
 
-This will launch the program's custom console, allowing you to control and modify neural networks.
+This will launch the program's custom console with all dependencies included (using shading), allowing you to control and modify neural networks.
 
-Or, if you are using the library, you can compile and run your own Java files that import the `NeuralNetwork` class directly using the `import com.github.spaceshark123.neuralnetwork.NeuralNetwork;` statement.
+Or, if you are using the library, running `mvn package` by itself gives the package as a library. You can compile and run your own Java files that import the `NeuralNetwork` class directly using the `import io.github.spaceshark123.neuralnetwork.NeuralNetwork;` statement.
 
 #### Available Commands
 
